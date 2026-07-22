@@ -151,11 +151,26 @@ class LakeTable:
         actions = [{"remove": {"path": f}} for f in live]
         actions.append({"add": {"path": filename, "num_rows": num_rows}})
         self._commit(actions)
-        # delete the old data files only AFTER the commit is durable
-        for f in live:
-            os.remove(os.path.join(self.path, f))
+        # The old files are now LOGICALLY removed from the latest snapshot,
+        # but stay on disk so time travel keeps working - exactly like Delta
+        # Lake, where OPTIMIZE never deletes data (VACUUM does).
         return filename
         # [SOLUTION END]
+
+    def vacuum(self):
+        """Physically delete Parquet files no longer in the current snapshot.
+
+        This is what finally breaks time travel to versions that referenced
+        the deleted files (Delta Lake's VACUUM works the same way, minus the
+        retention period). Returns the list of deleted file names.
+        """
+        live = set(self._snapshot_files())
+        removed = []
+        for name in os.listdir(self.path):
+            if name.endswith(".parquet") and name not in live:
+                os.remove(os.path.join(self.path, name))
+                removed.append(name)
+        return removed
 
     # ------------------------------------------------------------------
     # provided helpers: the transaction log itself
