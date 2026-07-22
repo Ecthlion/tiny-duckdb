@@ -85,9 +85,21 @@ def test_compact_merges_files(table):
         table.append(make_rows(batch * 25, 25))
     compacted = table.compact()
     assert compacted is not None
-    live = [f for f in os.listdir(table.path) if f.endswith(".parquet")]
-    assert live == [compacted]
+    # the snapshot exposes exactly one live file; the old files are logically
+    # removed but physically kept for time travel (vacuum() deletes them)
+    assert table._snapshot_files() == [compacted]
     assert sorted(table.scan()) == make_rows(0, 100)
+
+
+def test_vacuum_removes_stale_files(table):
+    for batch in range(3):
+        table.append(make_rows(batch * 10, 10))
+    table.compact()
+    removed = table.vacuum()
+    assert len(removed) == 3
+    live = [f for f in os.listdir(table.path) if f.endswith(".parquet")]
+    assert len(live) == 1
+    assert sorted(table.scan()) == make_rows(0, 30)
 
 
 def test_compact_single_file_is_noop(table):

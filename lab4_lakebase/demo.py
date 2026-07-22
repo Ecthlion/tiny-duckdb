@@ -35,6 +35,13 @@ def main():
 
     table.compact()
     print("\n== after compaction ==")
+    print("live snapshot files:", table._snapshot_files())
+    print("files on disk (old ones kept for time travel):")
+    for name in sorted(os.listdir(table.path)):
+        print(" ", name)
+
+    removed = table.vacuum()
+    print("\n== vacuum removed", len(removed), "stale files ==")
     for name in sorted(os.listdir(table.path)):
         print(" ", name)
 
