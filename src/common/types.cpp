@@ -1,0 +1,85 @@
+#include "tiny_duckdb/common/types.hpp"
+
+#include "tiny_duckdb/common/exception.hpp"
+
+namespace tiny_duckdb {
+
+LogicalType::LogicalType() : id_(LogicalTypeId::INTEGER) {
+}
+
+LogicalType::LogicalType(LogicalTypeId id) : id_(id) {
+}
+
+LogicalTypeId LogicalType::Id() const {
+	return id_;
+}
+
+idx_t LogicalType::FixedSize() const {
+	switch (id_) {
+	case LogicalTypeId::BOOLEAN:
+		return sizeof(bool);
+	case LogicalTypeId::INTEGER:
+		return sizeof(int32_t);
+	case LogicalTypeId::BIGINT:
+		return sizeof(int64_t);
+	case LogicalTypeId::DOUBLE:
+		return sizeof(double);
+	case LogicalTypeId::VARCHAR:
+		return 0;
+	}
+	throw StorageException("Unknown logical type");
+}
+
+bool LogicalType::IsNumeric() const {
+	return id_ == LogicalTypeId::INTEGER || id_ == LogicalTypeId::BIGINT || id_ == LogicalTypeId::DOUBLE;
+}
+
+bool LogicalType::IsIntegral() const {
+	return id_ == LogicalTypeId::INTEGER || id_ == LogicalTypeId::BIGINT;
+}
+
+std::string LogicalType::ToString() const {
+	switch (id_) {
+	case LogicalTypeId::BOOLEAN:
+		return "BOOLEAN";
+	case LogicalTypeId::INTEGER:
+		return "INTEGER";
+	case LogicalTypeId::BIGINT:
+		return "BIGINT";
+	case LogicalTypeId::DOUBLE:
+		return "DOUBLE";
+	case LogicalTypeId::VARCHAR:
+		return "VARCHAR";
+	}
+	return "UNKNOWN";
+}
+
+LogicalType LogicalType::Boolean() {
+	return LogicalType(LogicalTypeId::BOOLEAN);
+}
+
+LogicalType LogicalType::Integer() {
+	return LogicalType(LogicalTypeId::INTEGER);
+}
+
+LogicalType LogicalType::BigInt() {
+	return LogicalType(LogicalTypeId::BIGINT);
+}
+
+LogicalType LogicalType::Double() {
+	return LogicalType(LogicalTypeId::DOUBLE);
+}
+
+LogicalType LogicalType::Varchar() {
+	return LogicalType(LogicalTypeId::VARCHAR);
+}
+
+bool LogicalType::operator==(const LogicalType &rhs) const {
+	return id_ == rhs.id_;
+}
+
+bool LogicalType::operator!=(const LogicalType &rhs) const {
+	return id_ != rhs.id_;
+}
+
+} // namespace tiny_duckdb
