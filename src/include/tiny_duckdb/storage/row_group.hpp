@@ -11,15 +11,30 @@
 namespace tiny_duckdb {
 
 //! ============================================================================
-//! LAB 1 - Columnar storage
+//! LAB 1 - Columnar storage: the RowGroup
 //!
 //! A RowGroup is a horizontal partition of a table (up to ROW_GROUP_SIZE
 //! rows). Inside a row group, data is stored column-at-a-time: one
 //! ColumnChunk per column. Row groups are the "morsels" of the parallel scan
 //! in Lab 3.
 //!
-//! Task L1.T4: RowGroup::Append / RowGroup::Scan - route each column of a
-//!             DataChunk to its ColumnChunk, and back.
+//! ----------------------------------------------------------------------------
+//! Task L1.T4 - RowGroup::Append / RowGroup::Scan
+//!
+//! Route each column of a DataChunk to its ColumnChunk, and back:
+//!   Append(chunk, source_offset, count) forwards every column i of the
+//!     chunk to columns_[i]->Append(...); keep count_ in sync.
+//!   Scan(offset, count, column_ids, out) reads count rows starting at row
+//!     group offset `offset`, but ONLY the columns listed in column_ids:
+//!     output column j comes from row-group column column_ids[j]. This is
+//!     what lets a query read 2 columns out of a 16-column table without
+//!     touching the other 14 (projection pushdown into storage).
+//!
+//! Hint: Scan assumes out was initialized with the column types in
+//!       column_ids order - just forward to ColumnChunk::Scan per column.
+//!
+//! Tests: Lab1StorageTest.RowGroupAppendScan (includes a reordered column
+//!        list), TableScanMorselsCoverAllRows / TableScanRoundTrip
 //! ============================================================================
 class RowGroup {
 public:

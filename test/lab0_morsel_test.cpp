@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <thread>
 #include <vector>
 
@@ -61,4 +62,38 @@ TEST(Lab0MorselTest, ConcurrentExactlyOnce) {
 	for (idx_t i = 0; i < TOTAL; i++) {
 		EXPECT_EQ(all[i], i);
 	}
+}
+
+TEST(Lab0MorselTest, ExhaustedQueueStaysExhausted) {
+	MorselQueue queue(1);
+	idx_t morsel;
+	EXPECT_TRUE(queue.NextMorsel(morsel));
+	EXPECT_EQ(morsel, 0);
+	EXPECT_FALSE(queue.NextMorsel(morsel));
+	// once exhausted, further calls keep returning false (no wraparound)
+	EXPECT_FALSE(queue.NextMorsel(morsel));
+	EXPECT_FALSE(queue.NextMorsel(morsel));
+}
+
+TEST(Lab0MorselTest, SingleProducerManyThreads) {
+	// a single morsel must be handed to exactly ONE thread
+	MorselQueue queue(1);
+	std::atomic<idx_t> handed_out {0};
+	std::vector<std::thread> threads;
+	for (idx_t t = 0; t < 8; t++) {
+		threads.emplace_back([&queue, &handed_out] {
+			try {
+				idx_t morsel;
+				if (queue.NextMorsel(morsel)) {
+					handed_out.fetch_add(1);
+				}
+			} catch (const std::exception &) {
+				// student-edition stub; the EXPECT below reports the failure
+			}
+		});
+	}
+	for (auto &thread : threads) {
+		thread.join();
+	}
+	EXPECT_EQ(handed_out.load(), 1);
 }
