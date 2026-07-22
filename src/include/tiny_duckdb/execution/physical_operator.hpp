@@ -12,19 +12,10 @@ namespace tiny_duckdb {
 
 class ExecutionContext;
 
-//! ============================================================================
-//! LAB 3 - push-based execution: the physical operator interface
-//!
-//! Every physical operator can play up to three roles (several at once):
-//!
-//!  * SOURCE   - produces chunks: GetData()
-//!  * OPERATOR - transforms a chunk in place: Execute()
-//!  * SINK     - consumes chunks: Sink() + Combine() + Finalize()
-//!
-//! Per-thread state is created through the Get*State methods; all shared
-//! state lives in the GLOBAL state objects, thread-private state in the
-//! operator/local state objects. This is how DuckDB keeps operators parallel.
-//! ============================================================================
+//! ---------------------------------------------------------------------------
+//! Operator states (subclassed by operators that need per-thread or shared
+//! state). Mirrors DuckDB's source/sink state split.
+//! ---------------------------------------------------------------------------
 class OperatorState {
 public:
 	virtual ~OperatorState() = default;
@@ -81,40 +72,31 @@ public:
 	}
 };
 
-//! Input bundle for GetData(): the per-thread operator state + the shared global source state
 struct SourceInput {
 	OperatorState &state;
 	GlobalSourceState *global_state;
 };
 
+//! ============================================================================
+//! LAB 3 - Push-based (morsel-driven) execution
+//!
+//! A physical operator can play up to three roles, exactly like in DuckDB:
+//!
+//!  * SOURCE: GetData() produces chunks (table scan; also aggregation/order/
+//!    limit after their Finalize).
+//!  * OPERATOR: Execute() transforms a chunk in the middle of a pipeline
+//!    (filter, projection, join probe).
+//!  * SINK: Sink()/Combine()/Finalize() consume chunks (aggregation, order,
+//!    limit, join build side, result collector).
+//!
+//! A pipeline is: one source -> zero or more operators -> at most one sink.
+//! ============================================================================
 class PhysicalOperator {
 public:
 	PhysicalOperator(PhysicalOperatorType type, std::vector<LogicalType> types)
 	    : type(type), types(std::move(types)) {
 	}
 	virtual ~PhysicalOperator() = default;
-
-	//! Operators that can be pipeline sinks
-	bool IsSink() const {
-		return type == PhysicalOperatorType::HASH_GROUP_BY || type == PhysicalOperatorType::ORDER_BY ||
-		       type == PhysicalOperatorType::LIMIT || type == PhysicalOperatorType::HASH_JOIN ||
-		       type == PhysicalOperatorType::RESULT_COLLECTOR;
-	}
-
-	// --- source interface ----------------------------------------------------
-	virtual std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context);
-	virtual std::unique_ptr<GlobalSourceState> GetGlobalSourceState(ExecutionContext &context);
-	virtual void GetData(ExecutionContext &context, DataChunk &chunk, SourceInput &input);
-
-	// --- operator interface --------------------------------------------------
-	virtual void Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state);
-
-	// --- sink interface ------------------------------------------------------
-	virtual std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext &context);
-	virtual std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext &context, GlobalSinkState &gstate);
-	virtual void Sink(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate, DataChunk &chunk);
-	virtual void Combine(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate);
-	virtual void Finalize(ExecutionContext &context, GlobalSinkState &gstate);
 
 	PhysicalOperatorType type;
 	//! Output schema
@@ -130,6 +112,28 @@ public:
 	const T &Cast() const {
 		return static_cast<const T &>(*this);
 	}
+
+	bool IsSink() const {
+		return type == PhysicalOperatorType::HASH_GROUP_BY || type == PhysicalOperatorType::ORDER_BY ||
+		       type == PhysicalOperatorType::LIMIT || type == PhysicalOperatorType::HASH_JOIN ||
+		       type == PhysicalOperatorType::RESULT_COLLECTOR;
+	}
+
+	// --- source interface ---
+	virtual std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context);
+	virtual std::unique_ptr<GlobalSourceState> GetGlobalSourceState(ExecutionContext &context);
+	virtual void GetData(ExecutionContext &context, DataChunk &chunk, SourceInput &input);
+
+	// --- operator interface ---
+	virtual void Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state);
+
+	// --- sink interface ---
+	virtual std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext &context);
+	virtual std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext &context, GlobalSinkState &gstate);
+	virtual void Sink(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate,
+	                  DataChunk &chunk);
+	virtual void Combine(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate);
+	virtual void Finalize(ExecutionContext &context, GlobalSinkState &gstate);
 };
 
 } // namespace tiny_duckdb

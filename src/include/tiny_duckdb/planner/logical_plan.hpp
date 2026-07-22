@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "tiny_duckdb/binder/bound_expression.hpp"
-#include "tiny_duckdb/common/enums.hpp"
 #include "tiny_duckdb/common/types.hpp"
 
 namespace tiny_duckdb {
@@ -23,9 +22,10 @@ enum class LogicalOperatorType : uint8_t {
 	LOGICAL_LIMIT = 6
 };
 
-//! ============================================================================
-//! LAB 2 - the logical plan produced by the Binder
-//! ============================================================================
+//! ---------------------------------------------------------------------------
+//! Logical plan nodes (produced by the Binder, Lab 2; turned into physical
+//! operators by the PhysicalPlanGenerator, Lab 3).
+//! ---------------------------------------------------------------------------
 class LogicalOperator {
 public:
 	explicit LogicalOperator(LogicalOperatorType type) : type(type) {
@@ -48,7 +48,7 @@ public:
 	}
 };
 
-//! Scan a base table (a subset of its columns)
+//! Scan of a base table; column_ids refers to table column indexes
 class LogicalGet : public LogicalOperator {
 public:
 	LogicalGet(TableData &table, std::vector<idx_t> column_ids);
@@ -75,7 +75,7 @@ public:
 	std::vector<std::unique_ptr<BoundExpression>> expressions;
 };
 
-//! GROUP BY + aggregates. Output = group columns, then aggregate results.
+//! GROUP BY + aggregates. Output: group columns first, then aggregate results.
 class LogicalAggregate : public LogicalOperator {
 public:
 	LogicalAggregate(std::vector<std::unique_ptr<BoundExpression>> groups_p,
@@ -88,22 +88,22 @@ public:
 	std::vector<std::unique_ptr<BoundAggregateExpression>> aggregates;
 };
 
-//! INNER equi-join: children are left/right inputs, conditions are
-//! (left key, right key) column pairs. Output = left columns ++ right columns.
+//! INNER equi-join. Left child = probe side, right child = build side.
 class LogicalJoin : public LogicalOperator {
 public:
 	LogicalJoin() : LogicalOperator(LogicalOperatorType::LOGICAL_JOIN) {
 	}
 
+	//! Equi-conditions: left key over left child output, right key over right child output
 	std::vector<std::pair<std::unique_ptr<BoundExpression>, std::unique_ptr<BoundExpression>>> conditions;
 };
 
-//! ORDER BY: keys are (output column index, ascending)
 class LogicalOrder : public LogicalOperator {
 public:
 	LogicalOrder() : LogicalOperator(LogicalOperatorType::LOGICAL_ORDER) {
 	}
 
+	//! (output column index, ascending)
 	std::vector<std::pair<idx_t, bool>> keys;
 };
 
