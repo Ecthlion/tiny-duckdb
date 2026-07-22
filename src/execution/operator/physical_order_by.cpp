@@ -4,6 +4,48 @@
 
 namespace tiny_duckdb {
 
+//! ============================================================================
+//! LAB 3 - TASK #6: ORDER BY and LIMIT (PhysicalOrderBy / PhysicalLimit)
+//!
+//! Both are SINKs that materialize the full input, then turn into a SOURCE.
+//! The materialization helpers (MaterializeChunk / CombineRows / EmitRows)
+//! are provided - study them, they show the standard local/global sink
+//! pattern you already used in Task #4.
+//!
+//! ----------------------------------------------------------------------------
+//! Task L3.T6a - PhysicalOrderBy::Finalize
+//!
+//! Sort the materialized rows (result_rows_) according to `keys`, a list of
+//! (column_index, ascending) pairs: compare key 0 first, break ties with
+//! key 1, and so on.
+//!
+//! Hint: use std::stable_sort (input arrives from multiple worker threads in
+//!       nondeterministic order; a stable sort keeps equal keys in a
+//!       deterministic relative order - your tests compare sorted output,
+//!       but stability is one line of insurance you should understand).
+//! Hint: Value::Equals and Value::LessThan handle all types; in this system
+//!       NULL sorts FIRST (LessThan defines NULL < any non-NULL value).
+//! Hint: for descending keys swap the operands instead of negating the
+//!       result.
+//!
+//! Tests: Lab3ExecutionTest.OrderBy*
+//!
+//! ----------------------------------------------------------------------------
+//! Task L3.T6b - PhysicalLimit::Sink
+//!
+//! LIMIT without ORDER BY is not order-sensitive, so we truncate eagerly:
+//! keep at most `limit` rows GLOBALLY, across all worker threads. Sink is
+//! called concurrently - guard the shared row list with global.lock and only
+//! append while fewer than `limit` rows have been collected.
+//!
+//! Hint: compute how many rows are still needed (limit - rows.size()); if it
+//!       is zero, drop the chunk immediately.
+//! Note: Combine/Finalize are provided and trivial - all the work happens in
+//!       Sink (this is why the local sink state is unused here).
+//!
+//! Tests: Lab3ExecutionTest.Limit* / OrderByDescLimit
+//! ============================================================================
+
 namespace {
 
 //! Shared materialization state used by both ORDER BY and LIMIT
@@ -64,25 +106,26 @@ PhysicalOrderBy::PhysicalOrderBy(std::vector<std::pair<idx_t, bool>> keys_p, std
 	names = std::move(names_p);
 }
 
-std::unique_ptr<GlobalSinkState> PhysicalOrderBy::GetGlobalSinkState(ExecutionContext &/*context*/) {
+std::unique_ptr<GlobalSinkState> PhysicalOrderBy::GetGlobalSinkState(ExecutionContext & /*context*/) {
 	return std::make_unique<MaterializeGlobalSinkState>();
 }
 
-std::unique_ptr<LocalSinkState> PhysicalOrderBy::GetLocalSinkState(ExecutionContext &/*context*/,
-                                                                   GlobalSinkState &/*gstate*/) {
+std::unique_ptr<LocalSinkState> PhysicalOrderBy::GetLocalSinkState(ExecutionContext & /*context*/,
+                                                                   GlobalSinkState & /*gstate*/) {
 	return std::make_unique<MaterializeLocalSinkState>();
 }
 
-void PhysicalOrderBy::Sink(ExecutionContext &/*context*/, GlobalSinkState &/*gstate*/, LocalSinkState &lstate,
+void PhysicalOrderBy::Sink(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState &lstate,
                            DataChunk &chunk) {
 	MaterializeChunk(chunk, lstate.Cast<MaterializeLocalSinkState>().rows);
 }
 
-void PhysicalOrderBy::Combine(ExecutionContext &/*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
+void PhysicalOrderBy::Combine(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
 	CombineRows(gstate.Cast<MaterializeGlobalSinkState>(), lstate.Cast<MaterializeLocalSinkState>());
 }
 
-void PhysicalOrderBy::Finalize(ExecutionContext &/*context*/, GlobalSinkState &gstate) {
+void PhysicalOrderBy::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
+	// [SOLUTION BEGIN L3.T6]
 	auto &global = gstate.Cast<MaterializeGlobalSinkState>();
 	result_rows_ = std::move(global.rows);
 	// stable multi-key sort; NULLs sort first (Value::LessThan)
@@ -101,9 +144,10 @@ void PhysicalOrderBy::Finalize(ExecutionContext &/*context*/, GlobalSinkState &g
 		}
 		return false;
 	});
+	// [SOLUTION END]
 }
 
-void PhysicalOrderBy::GetData(ExecutionContext &/*context*/, DataChunk &chunk, SourceInput &/*input*/) {
+void PhysicalOrderBy::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput & /*input*/) {
 	EmitRows(result_rows_, emit_offset_, chunk);
 }
 
@@ -116,17 +160,18 @@ PhysicalLimit::PhysicalLimit(int64_t limit_p, std::vector<LogicalType> types_p, 
 	names = std::move(names_p);
 }
 
-std::unique_ptr<GlobalSinkState> PhysicalLimit::GetGlobalSinkState(ExecutionContext &/*context*/) {
+std::unique_ptr<GlobalSinkState> PhysicalLimit::GetGlobalSinkState(ExecutionContext & /*context*/) {
 	return std::make_unique<MaterializeGlobalSinkState>();
 }
 
-std::unique_ptr<LocalSinkState> PhysicalLimit::GetLocalSinkState(ExecutionContext &/*context*/,
-                                                                 GlobalSinkState &/*gstate*/) {
+std::unique_ptr<LocalSinkState> PhysicalLimit::GetLocalSinkState(ExecutionContext & /*context*/,
+                                                                 GlobalSinkState & /*gstate*/) {
 	return std::make_unique<MaterializeLocalSinkState>();
 }
 
-void PhysicalLimit::Sink(ExecutionContext &/*context*/, GlobalSinkState &gstate, LocalSinkState &/*lstate*/,
+void PhysicalLimit::Sink(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState & /*lstate*/,
                          DataChunk &chunk) {
+	// [SOLUTION BEGIN L3.T6]
 	// limit is not order-sensitive: truncate globally under the lock
 	auto &global = gstate.Cast<MaterializeGlobalSinkState>();
 	std::lock_guard<std::mutex> guard(global.lock);
@@ -144,18 +189,19 @@ void PhysicalLimit::Sink(ExecutionContext &/*context*/, GlobalSinkState &gstate,
 		}
 		global.rows.push_back(std::move(values));
 	}
+	// [SOLUTION END]
 }
 
-void PhysicalLimit::Combine(ExecutionContext &/*context*/, GlobalSinkState &/*gstate*/, LocalSinkState &/*lstate*/) {
+void PhysicalLimit::Combine(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState & /*lstate*/) {
 	// Sink wrote straight into the global state; nothing to combine
 }
 
-void PhysicalLimit::Finalize(ExecutionContext &/*context*/, GlobalSinkState &gstate) {
+void PhysicalLimit::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
 	auto &global = gstate.Cast<MaterializeGlobalSinkState>();
 	result_rows_ = std::move(global.rows);
 }
 
-void PhysicalLimit::GetData(ExecutionContext &/*context*/, DataChunk &chunk, SourceInput &/*input*/) {
+void PhysicalLimit::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput & /*input*/) {
 	EmitRows(result_rows_, emit_offset_, chunk);
 }
 
