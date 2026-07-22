@@ -6,6 +6,7 @@
 
 #include "tiny_duckdb/common/data_chunk.hpp"
 #include "tiny_duckdb/common/enums.hpp"
+#include "tiny_duckdb/common/exception.hpp"
 #include "tiny_duckdb/common/types.hpp"
 
 namespace tiny_duckdb {
@@ -77,6 +78,13 @@ struct SourceInput {
 	GlobalSourceState *global_state;
 };
 
+//! Result of an operator's Execute call (DuckDB-style):
+//!   NEED_MORE_INPUT  the operator consumed the input; pull a fresh chunk
+//!   HAVE_MORE_OUTPUT the operator has more output for the SAME logical input
+//!                    (e.g. a join probe row with many matches); call it again
+//!                    WITHOUT pulling a new source chunk
+enum class OperatorResultType : uint8_t { NEED_MORE_INPUT = 0, HAVE_MORE_OUTPUT = 1 };
+
 //! ============================================================================
 //! LAB 3 - Push-based (morsel-driven) execution
 //!
@@ -125,7 +133,7 @@ public:
 	virtual void GetData(ExecutionContext &context, DataChunk &chunk, SourceInput &input);
 
 	// --- operator interface ---
-	virtual void Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state);
+	virtual OperatorResultType Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state);
 
 	// --- sink interface ---
 	virtual std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext &context);
