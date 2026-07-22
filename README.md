@@ -46,11 +46,13 @@ tdb> SELECT l_returnflag, count(*), avg(l_quantity) FROM lineitem GROUP BY l_ret
 
 | Lab | 主题 | 关键概念 | 文档 |
 |-----|------|----------|------|
-| **Lab 0** | C++ 热身 | 原子操作、morsel 队列 | [docs/lab0.md](docs/lab0.md) |
-| **Lab 1** | 列式存储 | Vector、DataChunk、行组、zone map 跳读 | [docs/lab1.md](docs/lab1.md) |
-| **Lab 2** | SQL 前端 | PEG 文法、packrat 解析、Transformer、Binder | [docs/lab2.md](docs/lab2.md) |
-| **Lab 3** | 执行引擎 | push-based 流水线、morsel-driven 并行、向量化执行、哈希聚合/连接 | [docs/lab3.md](docs/lab3.md) |
-| **Lab 4** | 探索性：lakebase | 用真实 DuckDB 读写 Parquet 湖表、事务日志、时间旅行、compaction | [docs/lab4.md](docs/lab4.md) |
+| **Lab 0** | C++ 热身（1 个任务） | 原子操作、morsel 队列 | [docs/lab0.md](docs/lab0.md) |
+| **Lab 1** | 列式存储（5 个任务） | Vector、DataChunk、行组、zone map 跳读 | [docs/lab1.md](docs/lab1.md) |
+| **Lab 2** | SQL 前端（8 个任务） | PEG 文法、packrat 解析、Transformer、Binder | [docs/lab2.md](docs/lab2.md) |
+| **Lab 3** | 执行引擎（6 个任务） | push-based 流水线、morsel-driven 并行、向量化执行、哈希聚合/连接 | [docs/lab3.md](docs/lab3.md) |
+| **Lab 4** | 探索性：lakebase（4 个任务） | 用真实 DuckDB 读写 Parquet 湖表、事务日志、时间旅行、compaction/vacuum | [docs/lab4.md](docs/lab4.md) |
+
+每份实验指导书按 BusTub 风格组织：Overview（任务与测试里程碑表）→ Background（必读背景）→ 逐任务规格与 Hint → Testing → Development Hints → Grading Rubric → 思考题。源码中的任务注释（strip 后保留给学生）与指导书一一对应。
 
 ## 快速开始
 
@@ -58,8 +60,12 @@ tdb> SELECT l_returnflag, count(*), avg(l_quantity) FROM lineitem GROUP BY l_ret
 # 构建（首选；也提供 CMakeLists.txt）
 make -j$(nproc)
 
-# 运行全部 60+ 个测试
-make test          # 等价于 ./tdbtest
+# 运行全部 89 个 C++ 测试（Lab 0-3）
+make test                    # 等价于 ./tdbtest
+
+# 按套件名/前缀过滤（BusTub 式工作流：完成一个任务就跑它的一组测试）
+./tdbtest Lab1StorageTest.ZoneMap
+./tdbtest Lab3ExecutionTest.Join
 
 # 启动 SQL shell
 ./tiny_duckdb_shell
@@ -89,7 +95,7 @@ python3 demo.py
 ./tools/strip_solutions.sh ../tiny-duckdb-student
 ```
 
-学生版中每个任务被替换为 `throw NotImplementedException(...)` 桩，代码可以直接编译，测试全部失败，学生按 Lab 顺序逐个解锁。
+学生版中每个任务被替换为 `throw NotImplementedException(...)` 桩，代码可以直接编译，测试几乎全部失败（并明确报出 `task Lx.Ty not implemented yet`），学生按 Lab 顺序逐个解锁；源码中的任务注释与 `docs/labN.md` 指导书提供完整实现指引。
 
 ## 目录结构
 

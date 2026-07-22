@@ -79,19 +79,28 @@ void Pipeline::ExecuteWorker(ExecutionContext &context, GlobalSourceState *globa
 		if (chunk.size() == 0) {
 			break;
 		}
-		bool filtered_out = false;
-		for (idx_t i = 0; i < operators.size(); i++) {
-			operators[i]->Execute(context, chunk, *operator_states[i]);
-			if (chunk.size() == 0) {
-				filtered_out = true;
-				break;
+		// Push the chunk through the operator chain. An operator may return
+		// HAVE_MORE_OUTPUT (e.g. a join probe holding un-emitted matches), in
+		// which case the chain runs again on its fresh output WITHOUT pulling
+		// a new chunk from the source. The loop ends when every operator
+		// reports NEED_MORE_INPUT.
+		bool need_more_input = false;
+		while (!need_more_input) {
+			need_more_input = true;
+			for (idx_t i = 0; i < operators.size(); i++) {
+				auto result = operators[i]->Execute(context, chunk, *operator_states[i]);
+				if (result == OperatorResultType::HAVE_MORE_OUTPUT) {
+					// remember even if a downstream filter empties this chunk:
+					// the operator still holds pending output we must drain
+					need_more_input = false;
+				}
+				if (chunk.size() == 0) {
+					break; // fully filtered out
+				}
 			}
-		}
-		if (filtered_out) {
-			continue;
-		}
-		if (sink) {
-			sink->Sink(context, *global_sink, *local_sink, chunk);
+			if (chunk.size() > 0 && sink) {
+				sink->Sink(context, *global_sink, *local_sink, chunk);
+			}
 		}
 	}
 	if (sink) {
