@@ -350,3 +350,185 @@ TEST(Lab3ExecutionTest, OrderByGroupByResult) {
 	            {Value::Varchar("b"), Value::BigInt(1)},
 	            {Value::Varchar("c"), Value::BigInt(3)}});
 }
+
+// --- extra coverage, one block per task -------------------------------------
+
+TEST(Lab3ExecutionTest, ExpressionEvaluatorConstant) {
+	DataChunk chunk;
+	chunk.Initialize({LogicalType::Integer()});
+	chunk.AppendRow({Value::Integer(1)});
+	chunk.AppendRow({Value::Integer(2)});
+	BoundConstantExpression expr(Value::Varchar("const"));
+	Vector result(LogicalType::Varchar());
+	ExpressionExecutor::Evaluate(expr, chunk, result);
+	// a constant is broadcast to every row
+	EXPECT_EQ(result.GetValue(0), Value::Varchar("const"));
+	EXPECT_EQ(result.GetValue(1), Value::Varchar("const"));
+}
+
+TEST(Lab3ExecutionTest, ExpressionEvaluatorVarcharComparison) {
+	DataChunk chunk;
+	chunk.Initialize({LogicalType::Varchar()});
+	chunk.AppendRow({Value::Varchar("apple")});
+	chunk.AppendRow({Value::Varchar("banana")});
+	chunk.AppendRow({Value::Varchar("cherry")});
+	// col < 'c' matches "apple", "banana"
+	auto predicate = std::make_unique<BoundComparisonExpression>(
+	    ExpressionType::COMPARE_LESS_THAN,
+	    std::make_unique<BoundColumnRefExpression>("s", 0, LogicalType::Varchar()),
+	    std::make_unique<BoundConstantExpression>(Value::Varchar("c")));
+	SelectionVector sel;
+	idx_t matches = ExpressionExecutor::Select(*predicate, chunk, sel);
+	EXPECT_EQ(matches, 2);
+	EXPECT_EQ(sel.get_index(0), 0);
+	EXPECT_EQ(sel.get_index(1), 1);
+}
+
+TEST(Lab3ExecutionTest, ExpressionEvaluatorConjunction) {
+	DataChunk chunk;
+	chunk.Initialize({LogicalType::Integer()});
+	for (idx_t i = 0; i < 10; i++) {
+		chunk.AppendRow({Value::Integer(static_cast<int32_t>(i))});
+	}
+	auto gt = std::make_unique<BoundComparisonExpression>(
+	    ExpressionType::COMPARE_GREATER_THAN,
+	    std::make_unique<BoundColumnRefExpression>("a", 0, LogicalType::Integer()),
+	    std::make_unique<BoundConstantExpression>(Value::Integer(2)));
+	auto lt = std::make_unique<BoundComparisonExpression>(
+	    ExpressionType::COMPARE_LESS_THAN,
+	    std::make_unique<BoundColumnRefExpression>("a", 0, LogicalType::Integer()),
+	    std::make_unique<BoundConstantExpression>(Value::Integer(6)));
+	// a > 2 AND a < 6 -> rows 3, 4, 5
+	auto conjunction = std::make_unique<BoundConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(gt),
+	                                                           std::move(lt));
+	SelectionVector sel;
+	EXPECT_EQ(ExpressionExecutor::Select(*conjunction, chunk, sel), 3);
+	// a > 2 OR a < 6 -> every row
+	auto disjunction = std::make_unique<BoundConjunctionExpression>(
+	    ExpressionType::CONJUNCTION_OR,
+	    std::make_unique<BoundComparisonExpression>(
+	        ExpressionType::COMPARE_GREATER_THAN,
+	        std::make_unique<BoundColumnRefExpression>("a", 0, LogicalType::Integer()),
+	        std::make_unique<BoundConstantExpression>(Value::Integer(2))),
+	    std::make_unique<BoundComparisonExpression>(
+	        ExpressionType::COMPARE_LESS_THAN,
+	        std::make_unique<BoundColumnRefExpression>("a", 0, LogicalType::Integer()),
+	        std::make_unique<BoundConstantExpression>(Value::Integer(6))));
+	SelectionVector sel2;
+	EXPECT_EQ(ExpressionExecutor::Select(*disjunction, chunk, sel2), 10);
+}
+
+TEST(Lab3ExecutionTest, FilterNoRowsMatch) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE t (a INTEGER)");
+	Exec(db, "INSERT INTO t VALUES (1), (2), (3)");
+	auto result = Run(db, "SELECT * FROM t WHERE a > 100");
+	EXPECT_EQ(result->RowCount(), 0);
+}
+
+TEST(Lab3ExecutionTest, ProjectionConstantColumns) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE t (a INTEGER)");
+	Exec(db, "INSERT INTO t VALUES (1), (2)");
+	auto result = Run(db, "SELECT 42, 'x', a FROM t");
+	ExpectRows(*result,
+	           {{Value::Integer(42), Value::Varchar("x"), Value::Integer(1)},
+	            {Value::Integer(42), Value::Varchar("x"), Value::Integer(2)}});
+}
+
+TEST(Lab3ExecutionTest, ScanEmptyTable) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE t (a INTEGER, b VARCHAR)");
+	auto result = Run(db, "SELECT * FROM t");
+	EXPECT_EQ(result->RowCount(), 0);
+	auto filtered = Run(db, "SELECT * FROM t WHERE a > 0");
+	EXPECT_EQ(filtered->RowCount(), 0);
+}
+
+TEST(Lab3ExecutionTest, AggregateCountColumnSkipsNull) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE t (a INTEGER)");
+	Exec(db, "INSERT INTO t VALUES (1), (2), (NULL)");
+	auto result = Run(db, "SELECT count(a), count(*), sum(a) FROM t");
+	ExpectRows(*result, {{Value::BigInt(2), Value::BigInt(3), Value::BigInt(3)}});
+}
+
+TEST(Lab3ExecutionTest, AggregateMinMaxVarchar) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE t (s VARCHAR)");
+	Exec(db, "INSERT INTO t VALUES ('banana'), ('apple'), ('cherry')");
+	auto result = Run(db, "SELECT min(s), max(s) FROM t");
+	ExpectRows(*result, {{Value::Varchar("apple"), Value::Varchar("cherry")}});
+}
+
+TEST(Lab3ExecutionTest, JoinDuplicateKeys) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE l (k INTEGER, v VARCHAR)");
+	Exec(db, "CREATE TABLE r (k INTEGER, w VARCHAR)");
+	// one probe row matches three build rows -> three output rows
+	Exec(db, "INSERT INTO l VALUES (1, 'a')");
+	Exec(db, "INSERT INTO r VALUES (1, 'x'), (1, 'y'), (1, 'z')");
+	auto result = Run(db, "SELECT v, w FROM l JOIN r ON l.k = r.k");
+	ExpectRows(*result,
+	           {{Value::Varchar("a"), Value::Varchar("x")},
+	            {Value::Varchar("a"), Value::Varchar("y")},
+	            {Value::Varchar("a"), Value::Varchar("z")}},
+	           true);
+}
+
+TEST(Lab3ExecutionTest, JoinFanoutBeyondVectorSize) {
+	TinyDuckDB db;
+	db.SetThreads(1); // deterministic single-thread drain of the probe state
+	Exec(db, "CREATE TABLE big (k INTEGER)");
+	Exec(db, "CREATE TABLE small (k INTEGER)");
+	// 5000 build rows + 3 probe rows, all with key 1 -> 15000 output rows,
+	// far beyond STANDARD_VECTOR_SIZE: the probe must resume across calls
+	// (HAVE_MORE_OUTPUT). Regression test for lost pending output.
+	auto &big = db.GetCatalog().GetTable("big");
+	DataChunk chunk;
+	chunk.Initialize({LogicalType::Integer()});
+	for (idx_t i = 0; i < 5000; i++) {
+		chunk.AppendRow({Value::Integer(1)});
+		if (chunk.size() == STANDARD_VECTOR_SIZE) {
+			big.Append(chunk);
+			chunk.Reset();
+		}
+	}
+	if (chunk.size() > 0) {
+		big.Append(chunk);
+	}
+	Exec(db, "INSERT INTO small VALUES (1), (1), (1)");
+	auto result = Run(db, "SELECT count(*) FROM small JOIN big ON small.k = big.k");
+	EXPECT_EQ(result->GetValue(0, 0), Value::BigInt(15000));
+}
+
+TEST(Lab3ExecutionTest, JoinEmptyBuildSide) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE l (k INTEGER)");
+	Exec(db, "CREATE TABLE r (k INTEGER)");
+	Exec(db, "INSERT INTO l VALUES (1), (2)");
+	auto result = Run(db, "SELECT count(*) FROM l JOIN r ON l.k = r.k");
+	EXPECT_EQ(result->GetValue(0, 0), Value::BigInt(0));
+}
+
+TEST(Lab3ExecutionTest, OrderByMultipleKeys) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE t (a INTEGER, b INTEGER)");
+	Exec(db, "INSERT INTO t VALUES (2, 1), (1, 2), (2, 0), (1, 1)");
+	auto result = Run(db, "SELECT a, b FROM t ORDER BY a ASC, b DESC");
+	ExpectRows(*result,
+	           {{Value::Integer(1), Value::Integer(2)},
+	            {Value::Integer(1), Value::Integer(1)},
+	            {Value::Integer(2), Value::Integer(1)},
+	            {Value::Integer(2), Value::Integer(0)}});
+}
+
+TEST(Lab3ExecutionTest, LimitZeroAndBeyondTotal) {
+	TinyDuckDB db;
+	Exec(db, "CREATE TABLE t (a INTEGER)");
+	Exec(db, "INSERT INTO t VALUES (1), (2), (3)");
+	auto zero = Run(db, "SELECT * FROM t LIMIT 0");
+	EXPECT_EQ(zero->RowCount(), 0);
+	auto beyond = Run(db, "SELECT * FROM t LIMIT 100");
+	EXPECT_EQ(beyond->RowCount(), 3);
+}
