@@ -20,7 +20,7 @@ public:
 	               std::vector<std::string> names);
 
 	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context) override;
-	void Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
+	OperatorResultType Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
 
 	std::unique_ptr<BoundExpression> predicate;
 };
@@ -33,7 +33,7 @@ public:
 	                   std::vector<LogicalType> types, std::vector<std::string> names);
 
 	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context) override;
-	void Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
+	OperatorResultType Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
 
 	std::vector<std::unique_ptr<BoundExpression>> expressions;
 };

@@ -8,15 +8,29 @@
 namespace tiny_duckdb {
 
 //! ============================================================================
-//! LAB 0 - C++ Primer
+//! LAB 0 - C++ Primer: the MorselQueue
 //!
 //! A MorselQueue hands out morsel ids [0, total) to worker threads. It is the
 //! scheduling primitive at the heart of morsel-driven parallelism (Lab 3):
-//! every worker thread calls NextMorsel() in a loop, and each morsel is handed
-//! to exactly one thread.
+//! every worker thread calls NextMorsel() in a loop, and each morsel must be
+//! handed to EXACTLY ONE thread - no duplicates, no losses, no locks.
 //!
-//! Task L0.T1: implement NextMorsel so that it is thread-safe. Hint: one
-//! atomic fetch_add is all you need - no locks required.
+//! ----------------------------------------------------------------------------
+//! Task L0.T1 - MorselQueue::NextMorsel
+//!
+//! Make NextMorsel thread-safe. Contract:
+//!   * returns true and writes the next id into morsel_id while ids remain;
+//!   * returns false once all `total` ids have been handed out - and keeps
+//!     returning false forever after (no wraparound);
+//!   * over the whole run, every id in [0, total) is handed out exactly once,
+//!     no matter how many threads call concurrently.
+//!
+//! Hint: a single std::atomic<idx_t>::fetch_add is the whole solution. Think
+//!       about the difference between the returned value and the incremented
+//!       value, and why a mutex would be overkill (and slow) here.
+//!
+//! Tests: Lab0MorselTest.* (sequential dispatch, exhaustion, and a
+//!        4-thread exactly-once stress test over 10000 morsels)
 //! ============================================================================
 class MorselQueue {
 public:

@@ -17,7 +17,8 @@ void PhysicalOperator::GetData(ExecutionContext & /*context*/, DataChunk & /*chu
 	throw ExecutorException("GetData called on an operator that is not a source");
 }
 
-void PhysicalOperator::Execute(ExecutionContext & /*context*/, DataChunk & /*chunk*/, OperatorState & /*state*/) {
+OperatorResultType PhysicalOperator::Execute(ExecutionContext & /*context*/, DataChunk & /*chunk*/,
+                                             OperatorState & /*state*/) {
 	throw ExecutorException("Execute called on an operator that is not a pipeline operator");
 }
 
