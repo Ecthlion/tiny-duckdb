@@ -4,6 +4,18 @@
 
 DuckDB 很强，但历经多个版本后代码量太大，直接读源码学习"一个经典 OLAP 数据库应该如何实现"非常困难。tiny-duckdb 从零开始、仅保留最核心的架构概念，用约 5000 行 C++17 实现一个**真的可以跑 SQL** 的分析型数据库：
 
+```
+$ ./tiny_duckdb_shell
+tdb> CREATE TABLE lineitem (l_orderkey INTEGER, l_quantity DOUBLE, l_returnflag VARCHAR);
+tdb> INSERT INTO lineitem VALUES (1, 17.0, 'N'), (2, 36.0, 'A'), (3, 8.0, 'N');
+tdb> SELECT l_returnflag, count(*), avg(l_quantity) FROM lineitem GROUP BY l_returnflag;
+| l_returnflag | count(l_star) | avg(l_quantity) |
+|--------------|---------------|-----------------|
+| N            | 2             | 12.5            |
+| A            | 1             | 36              |
+(2 rows)
+```
+
 ## 架构总览
 
 ```
