@@ -127,10 +127,16 @@ inline void ExpectNear(double actual, double expected, double abs_error, const c
 	}
 }
 
-inline int RunAllTests() {
+inline int RunAllTests(const std::string &filter = "") {
 	int passed = 0;
 	int failed = 0;
 	for (const auto &test : Registry()) {
+		// optional substring filter: ./tdbtest Lab0 runs only Lab0* suites
+		const std::string full_name = test.suite + "." + test.name;
+		if (!filter.empty() && test.suite.find(filter) == std::string::npos &&
+		    full_name.find(filter) == std::string::npos) {
+			continue;
+		}
 		int failures_before = FailureCount();
 		std::cout << "[ RUN  ] " << test.suite << "." << test.name << "\n";
 		try {
@@ -149,6 +155,9 @@ inline int RunAllTests() {
 		}
 	}
 	std::cout << "========================================\n";
+	if (!filter.empty()) {
+		std::cout << "(filter: " << filter << ")\n";
+	}
 	std::cout << passed << " passed, " << failed << " failed\n";
 	return failed == 0 ? 0 : 1;
 }
@@ -191,4 +200,4 @@ inline int RunAllTests() {
 		}                                                                                                       \
 	} while (0)
 
-#define RUN_ALL_TESTS() ::tdbtest::RunAllTests()
+#define RUN_ALL_TESTS(filter) ::tdbtest::RunAllTests(filter)
