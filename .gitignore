@@ -1,0 +1,14 @@
+# build artifacts
+build/
+*.o
+*.a
+tdbtest
+tiny_duckdb_shell
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# misc
+.DS_Store
