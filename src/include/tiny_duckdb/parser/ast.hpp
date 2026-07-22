@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -11,103 +10,105 @@
 
 namespace tiny_duckdb {
 
-//! ============================================================================
-//! LAB 2 - the SQL AST produced by the Transformer
-//! ============================================================================
-
-//! Base class for all expressions
+//! ---------------------------------------------------------------------------
+//! Parsed SQL expressions (unbound: names not resolved yet)
+//! ---------------------------------------------------------------------------
 class Expression {
 public:
-	explicit Expression(ExpressionType type) : type(type) {
-	}
 	virtual ~Expression() = default;
 
 	ExpressionType type;
-
 	virtual std::string ToString() const = 0;
+
+protected:
+	explicit Expression(ExpressionType type) : type(type) {
+	}
 };
 
 class ConstantExpression : public Expression {
 public:
-	explicit ConstantExpression(const Value &value_p) : Expression(ExpressionType::VALUE_CONSTANT), value(value_p) {
+	explicit ConstantExpression(Value value_p) : Expression(ExpressionType::VALUE_CONSTANT), value(std::move(value_p)) {
 	}
-
-	std::string ToString() const override;
 
 	Value value;
+
+	std::string ToString() const override;
 };
 
+//! column, or table.column
 class ColumnRefExpression : public Expression {
 public:
-	explicit ColumnRefExpression(std::string column_p)
-	    : Expression(ExpressionType::COLUMN_REF), column(std::move(column_p)) {
+	explicit ColumnRefExpression(std::string column_name)
+	    : Expression(ExpressionType::COLUMN_REF), column(std::move(column_name)) {
 	}
-	ColumnRefExpression(std::string table_p, std::string column_p)
-	    : Expression(ExpressionType::COLUMN_REF), table(std::move(table_p)), column(std::move(column_p)) {
+	ColumnRefExpression(std::string table_name, std::string column_name)
+	    : Expression(ExpressionType::COLUMN_REF), table(std::move(table_name)), column(std::move(column_name)) {
 	}
 
 	bool IsQualified() const {
 		return !table.empty();
 	}
-	std::string ToString() const override;
 
 	std::string table;
 	std::string column;
+
+	std::string ToString() const override;
 };
 
 class ComparisonExpression : public Expression {
 public:
-	ComparisonExpression(ExpressionType type, std::unique_ptr<Expression> left_p, std::unique_ptr<Expression> right_p)
-	    : Expression(type), left(std::move(left_p)), right(std::move(right_p)) {
+	ComparisonExpression(ExpressionType comparison, std::unique_ptr<Expression> left_p,
+	                     std::unique_ptr<Expression> right_p)
+	    : Expression(comparison), left(std::move(left_p)), right(std::move(right_p)) {
 	}
-
-	std::string ToString() const override;
 
 	std::unique_ptr<Expression> left;
 	std::unique_ptr<Expression> right;
+
+	std::string ToString() const override;
 };
 
 class ConjunctionExpression : public Expression {
 public:
-	ConjunctionExpression(ExpressionType type, std::unique_ptr<Expression> left_p, std::unique_ptr<Expression> right_p)
-	    : Expression(type), left(std::move(left_p)), right(std::move(right_p)) {
+	ConjunctionExpression(ExpressionType conjunction, std::unique_ptr<Expression> left_p,
+	                      std::unique_ptr<Expression> right_p)
+	    : Expression(conjunction), left(std::move(left_p)), right(std::move(right_p)) {
 	}
-
-	std::string ToString() const override;
 
 	std::unique_ptr<Expression> left;
 	std::unique_ptr<Expression> right;
+
+	std::string ToString() const override;
 };
 
+//! Arithmetic: + - * /
 class OperatorExpression : public Expression {
 public:
-	OperatorExpression(ExpressionType type, std::unique_ptr<Expression> left_p, std::unique_ptr<Expression> right_p)
-	    : Expression(type), left(std::move(left_p)), right(std::move(right_p)) {
+	OperatorExpression(ExpressionType op, std::unique_ptr<Expression> left_p, std::unique_ptr<Expression> right_p)
+	    : Expression(op), left(std::move(left_p)), right(std::move(right_p)) {
 	}
-
-	std::string ToString() const override;
 
 	std::unique_ptr<Expression> left;
 	std::unique_ptr<Expression> right;
-};
-
-//! A function call like count(*) or sum(l_quantity). The type field holds
-//! AGGREGATE_COUNT as a placeholder until the binder resolves the function.
-class FunctionExpression : public Expression {
-public:
-	FunctionExpression(std::string name_p, std::vector<std::unique_ptr<Expression>> args_p, bool is_star_p)
-	    : Expression(ExpressionType::AGGREGATE_COUNT), name(std::move(name_p)), args(std::move(args_p)),
-	      is_star(is_star_p) {
-	}
 
 	std::string ToString() const override;
+};
+
+//! A function call, e.g. count(*), sum(l_extendedprice). Note: the `type`
+//! member carries AGGREGATE_COUNT as a placeholder until the binder resolves it.
+class FunctionExpression : public Expression {
+public:
+	explicit FunctionExpression(std::string name_p) : Expression(ExpressionType::AGGREGATE_COUNT), name(std::move(name_p)) {
+	}
 
 	std::string name;
 	std::vector<std::unique_ptr<Expression>> args;
-	bool is_star;
+	bool is_star = false; // count(*)
+
+	std::string ToString() const override;
 };
 
-//! The bare `*` in a select list
+//! SELECT *
 class StarExpression : public Expression {
 public:
 	StarExpression() : Expression(ExpressionType::COLUMN_REF) {
@@ -116,22 +117,23 @@ public:
 	std::string ToString() const override;
 };
 
-// ---------------------------------------------------------------------------
-// Statements
-// ---------------------------------------------------------------------------
-
+//! ---------------------------------------------------------------------------
+//! Statements
+//! ---------------------------------------------------------------------------
 enum class StatementType : uint8_t { SELECT_STATEMENT, CREATE_TABLE_STATEMENT, INSERT_STATEMENT };
 
 class Statement {
 public:
-	explicit Statement(StatementType type) : type(type) {
-	}
 	virtual ~Statement() = default;
 
 	StatementType type;
+
+protected:
+	explicit Statement(StatementType type) : type(type) {
+	}
 };
 
-struct OrderItem {
+struct OrderByItem {
 	std::unique_ptr<Expression> expression;
 	bool ascending = true;
 };
@@ -142,15 +144,20 @@ public:
 	}
 
 	std::vector<std::unique_ptr<Expression>> select_list;
-	//! Parallel to select_list; empty string = no alias
+	//! Alias per select item ("" when absent); parallel to select_list
 	std::vector<std::string> select_aliases;
+
 	std::string table;
+	//! Optional INNER JOIN (single join)
 	bool has_join = false;
 	std::string join_table;
 	std::unique_ptr<Expression> join_condition;
+
 	std::unique_ptr<Expression> where;
+
 	std::vector<std::unique_ptr<Expression>> group_by;
-	std::vector<OrderItem> order_by;
+	std::vector<OrderByItem> order_by;
+
 	bool has_limit = false;
 	int64_t limit = 0;
 };
