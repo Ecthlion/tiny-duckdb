@@ -44,12 +44,14 @@ int main() {
 			continue;
 		}
 		buffer += line;
-		if (line.find(';') == std::string::npos) {
+		auto semicolon = buffer.find(';');
+		if (semicolon == std::string::npos) {
 			buffer += '\n';
 			continue;
 		}
 		try {
-			auto result = connection.Query(buffer);
+			// the grammar does not accept the statement-terminating ';' itself
+			auto result = connection.Query(buffer.substr(0, semicolon));
 			std::cout << result->ToString() << "\n";
 		} catch (const std::exception &ex) {
 			std::cout << ex.what() << "\n";
