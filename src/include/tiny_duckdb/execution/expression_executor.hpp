@@ -7,20 +7,21 @@
 namespace tiny_duckdb {
 
 //! ============================================================================
-//! LAB 3 (Task L3.T1) - the ExpressionExecutor: vectorized expression
-//! evaluation over a DataChunk.
+//! LAB 3 (Task L3.T1) - the ExpressionExecutor
 //!
-//! Evaluate() computes one output Vector per expression; Select() evaluates a
-//! boolean expression and returns the matching row indexes as a selection
-//! vector - the filter's zero-copy trick.
+//! Evaluates a bound expression against an input DataChunk, producing one
+//! output Vector. Also evaluates filter predicates into a SelectionVector.
+//!
+//! Note: NULL semantics are simplified - a comparison involving NULL produces
+//! NULL, and conjunctions treat NULL as false (documented in docs/lab3.md).
 //! ============================================================================
 class ExpressionExecutor {
 public:
-	//! Evaluate the expression over the input chunk into result
+	//! Evaluate expr over chunk into result (result has expr.return_type)
 	static void Evaluate(const BoundExpression &expr, DataChunk &chunk, Vector &result);
 
-	//! Evaluate a boolean expression; write matching row indexes into sel and
-	//! return how many rows matched
+	//! Evaluate a boolean expression; write matching row indexes into sel.
+	//! Returns the number of matching rows.
 	static idx_t Select(const BoundExpression &expr, DataChunk &chunk, SelectionVector &sel);
 };
 

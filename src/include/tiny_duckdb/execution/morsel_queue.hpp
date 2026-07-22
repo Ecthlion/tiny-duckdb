@@ -8,32 +8,35 @@
 namespace tiny_duckdb {
 
 //! ============================================================================
-//! LAB 0 - C++ warmup: the MorselQueue
+//! LAB 0 - C++ Primer
 //!
-//! Morsel-driven parallelism (Leis et al., SIGMOD'14) splits the input into
-//! many small units of work ("morsels") and lets every worker thread grab
-//! the next morsel whenever it finishes the previous one. Fast threads do
-//! more work, slow threads do less - no stragglers, no static partitioning.
+//! A MorselQueue hands out morsel ids [0, total) to worker threads. It is the
+//! scheduling primitive at the heart of morsel-driven parallelism (Lab 3):
+//! every worker thread calls NextMorsel() in a loop, and each morsel is handed
+//! to exactly one thread.
 //!
-//! Task L0.T1: implement NextMorsel() so every morsel id in [0, total) is
-//!             handed out exactly once, from multiple threads, without locks.
-//!             Hint: std::atomic::fetch_add.
+//! Task L0.T1: implement NextMorsel so that it is thread-safe. Hint: one
+//! atomic fetch_add is all you need - no locks required.
 //! ============================================================================
 class MorselQueue {
 public:
-	explicit MorselQueue(idx_t total) : total_(total), next_(0) {
+	explicit MorselQueue(idx_t total_morsels) : total_(total_morsels), next_(0) {
 	}
 
-	//! Grab the next morsel id. Returns false when the queue is exhausted.
+	//! Grab the next morsel. Returns false when all morsels are taken.
 	bool NextMorsel(idx_t &morsel_id) {
 		// [SOLUTION BEGIN L0.T1]
-		const idx_t id = next_.fetch_add(1, std::memory_order_relaxed);
-		if (id >= total_) {
+		const idx_t morsel = next_.fetch_add(1, std::memory_order_relaxed);
+		if (morsel >= total_) {
 			return false;
 		}
-		morsel_id = id;
+		morsel_id = morsel;
 		return true;
 		// [SOLUTION END]
+	}
+
+	idx_t TotalMorsels() const {
+		return total_;
 	}
 
 private:

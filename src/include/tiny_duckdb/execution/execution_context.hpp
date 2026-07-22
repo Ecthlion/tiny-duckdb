@@ -6,10 +6,10 @@ namespace tiny_duckdb {
 
 class TinyDuckDB;
 
-//! Per-thread execution context handed to every operator call
+//! Per-query execution context: access to the database instance + thread id.
 class ExecutionContext {
 public:
-	ExecutionContext(TinyDuckDB &db_p, idx_t thread_id_p) : db(db_p), thread_id(thread_id_p) {
+	ExecutionContext(TinyDuckDB &db, idx_t thread_id) : db(db), thread_id(thread_id) {
 	}
 
 	TinyDuckDB &db;
