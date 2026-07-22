@@ -7,6 +7,69 @@
 
 namespace tiny_duckdb {
 
+//! ============================================================================
+//! LAB 3 - TASK #4: the parallel hash aggregate (PhysicalHashAggregate)
+//!
+//! GROUP BY is a SINK: it consumes the whole input before producing anything.
+//! Parallelism uses DuckDB's two-phase protocol:
+//!
+//!   phase 1  every worker folds its morsels into a THREAD-LOCAL hash table
+//!            (Sink) - no locking at all on the hot path;
+//!   phase 2  the per-thread tables are merged into one global table under a
+//!            lock (Combine), then each group is finalized into output rows
+//!            (Finalize). Afterwards the operator turns into a SOURCE and
+//!            hands the result rows to its parent (GetData).
+//!
+//! ----------------------------------------------------------------------------
+//! Task L3.T4a - the aggregate state machine (AggregateState)
+//!
+//! One AggregateState tracks ONE aggregate function over ONE group:
+//!
+//!   Update(input): fold one row's argument into the state.
+//!     COUNT(*) / COUNT(col)   count++; COUNT ignores NULL arguments
+//!     SUM / AVG               accumulate sum and count (skip NULLs)
+//!     MIN / MAX               keep the best candidate so far (skip NULLs;
+//!                             has_value tracks whether any value was seen)
+//!   Merge(other): combine two partial states (used by Combine). count and
+//!     sum add up; min/max keep the better candidate.
+//!   Finalize(return_type): produce the output Value.
+//!     COUNT*                  always Value::BigInt(count) - never NULL
+//!     SUM / AVG / MIN / MAX   NULL when no non-NULL input was seen
+//!     AVG                     sum / count as DOUBLE
+//!
+//! Hint: Value::GetNumeric() reads any numeric Value as double.
+//! Hint: for SUM, look at return_type.Id(): DOUBLE inputs produce
+//!       Value::Double(sum), integers Value::BigInt((int64_t)sum).
+//!
+//! Tests: Lab3ExecutionTest.CountStar / SumAvgMinMax / Aggregate*Null* /
+//!        AggregateEmptyTableNoGroupBy
+//!
+//! ----------------------------------------------------------------------------
+//! Task L3.T4b - the two-phase parallel protocol (Sink/Combine/Finalize/GetData)
+//!
+//!   Sink(chunk):     evaluate the group-by expressions and the aggregate
+//!                    arguments VECTOR-WISE (one ExpressionExecutor::Evaluate
+//!                    per expression per chunk), then fold every row into the
+//!                    thread-local GroupByHashTable (FindOrCreate + Update).
+//!   Combine:         merge the thread-local table into the global one under
+//!                    global.lock (FindOrCreate + Merge).
+//!   Finalize:        turn every group into one output row
+//!                    [group key columns..., aggregate results...].
+//!                    SPECIAL CASE: aggregation WITHOUT GROUP BY must emit
+//!                    exactly one row even when the input is empty
+//!                    (SELECT count(*) FROM empty -> 0). If groups is empty
+//!                    and the table is empty, FindOrCreate({}) forces it.
+//!   GetData:         the operator is now a SOURCE: copy result rows into
+//!                    chunk, STANDARD_VECTOR_SIZE at a time, using
+//!                    emit_offset_.fetch_add to partition the rows among
+//!                    threads; emit an empty chunk when done.
+//!
+//! Hint: the GroupByHashTable (FindOrCreate) is provided - read it first.
+//! Hint: agg->child is nullptr for count(*); pass a default Value() to Update.
+//!
+//! Tests: Lab3ExecutionTest.GroupBy* / ParallelGroupByConsistency
+//! ============================================================================
+
 namespace {
 
 //! ---------------------------------------------------------------------------
@@ -20,6 +83,7 @@ struct AggregateState {
 	Value value; // min/max candidate
 
 	void Update(const Value &input) {
+		// [SOLUTION BEGIN L3.T4]
 		switch (aggregate) {
 		case ExpressionType::AGGREGATE_COUNT_STAR:
 			count++;
@@ -54,9 +118,11 @@ struct AggregateState {
 		default:
 			throw ExecutorException("unknown aggregate");
 		}
+		// [SOLUTION END]
 	}
 
 	void Merge(const AggregateState &other) {
+		// [SOLUTION BEGIN L3.T4]
 		count += other.count;
 		sum += other.sum;
 		if (other.has_value) {
@@ -68,9 +134,11 @@ struct AggregateState {
 				value = other.value;
 			}
 		}
+		// [SOLUTION END]
 	}
 
 	Value Finalize(const LogicalType &return_type) const {
+		// [SOLUTION BEGIN L3.T4]
 		switch (aggregate) {
 		case ExpressionType::AGGREGATE_COUNT_STAR:
 		case ExpressionType::AGGREGATE_COUNT:
@@ -97,11 +165,13 @@ struct AggregateState {
 		default:
 			throw ExecutorException("unknown aggregate");
 		}
+		// [SOLUTION END]
 	}
 };
 
 //! ---------------------------------------------------------------------------
 //! The hash table: group key -> one AggregateState per aggregate function
+//! (provided - read this before writing Task L3.T4b)
 //! ---------------------------------------------------------------------------
 struct GroupKeyHash {
 	size_t operator()(const std::vector<Value> &key) const {
@@ -182,7 +252,7 @@ PhysicalHashAggregate::PhysicalHashAggregate(
 	names = std::move(names_p);
 }
 
-std::unique_ptr<GlobalSinkState> PhysicalHashAggregate::GetGlobalSinkState(ExecutionContext &/*context*/) {
+std::unique_ptr<GlobalSinkState> PhysicalHashAggregate::GetGlobalSinkState(ExecutionContext & /*context*/) {
 	auto result = std::make_unique<HashAggregateGlobalSinkState>();
 	std::vector<ExpressionType> aggregate_types;
 	for (const auto &agg : aggregates) {
@@ -192,8 +262,8 @@ std::unique_ptr<GlobalSinkState> PhysicalHashAggregate::GetGlobalSinkState(Execu
 	return result;
 }
 
-std::unique_ptr<LocalSinkState> PhysicalHashAggregate::GetLocalSinkState(ExecutionContext &/*context*/,
-                                                                         GlobalSinkState &/*gstate*/) {
+std::unique_ptr<LocalSinkState> PhysicalHashAggregate::GetLocalSinkState(ExecutionContext & /*context*/,
+                                                                         GlobalSinkState & /*gstate*/) {
 	auto result = std::make_unique<HashAggregateLocalSinkState>();
 	std::vector<ExpressionType> aggregate_types;
 	for (const auto &agg : aggregates) {
@@ -203,13 +273,10 @@ std::unique_ptr<LocalSinkState> PhysicalHashAggregate::GetLocalSinkState(Executi
 	return result;
 }
 
-void PhysicalHashAggregate::Sink(ExecutionContext &/*context*/, GlobalSinkState &/*gstate*/, LocalSinkState &lstate,
+void PhysicalHashAggregate::Sink(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState &lstate,
                                  DataChunk &chunk) {
+	// [SOLUTION BEGIN L3.T4]
 	auto &local = lstate.Cast<HashAggregateLocalSinkState>();
-	// ------------------------------------------------------------------
-	// L3.T4: evaluate group keys and aggregate arguments vector-wise,
-	// then fold every row into the thread-local hash table (no locking).
-	// ------------------------------------------------------------------
 	std::vector<std::unique_ptr<Vector>> group_vectors;
 	for (const auto &group : groups) {
 		auto vector = std::make_unique<Vector>(group->return_type);
@@ -237,9 +304,11 @@ void PhysicalHashAggregate::Sink(ExecutionContext &/*context*/, GlobalSinkState 
 			states[agg_idx].Update(input);
 		}
 	}
+	// [SOLUTION END]
 }
 
-void PhysicalHashAggregate::Combine(ExecutionContext &/*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
+void PhysicalHashAggregate::Combine(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
+	// [SOLUTION BEGIN L3.T4]
 	auto &global = gstate.Cast<HashAggregateGlobalSinkState>();
 	auto &local = lstate.Cast<HashAggregateLocalSinkState>();
 	std::lock_guard<std::mutex> guard(global.lock);
@@ -249,9 +318,11 @@ void PhysicalHashAggregate::Combine(ExecutionContext &/*context*/, GlobalSinkSta
 			states[agg_idx].Merge(local.table.states_[group][agg_idx]);
 		}
 	}
+	// [SOLUTION END]
 }
 
-void PhysicalHashAggregate::Finalize(ExecutionContext &/*context*/, GlobalSinkState &gstate) {
+void PhysicalHashAggregate::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
+	// [SOLUTION BEGIN L3.T4]
 	auto &global = gstate.Cast<HashAggregateGlobalSinkState>();
 	if (groups.empty() && global.table.Empty()) {
 		// aggregation without GROUP BY always produces exactly one row
@@ -264,9 +335,11 @@ void PhysicalHashAggregate::Finalize(ExecutionContext &/*context*/, GlobalSinkSt
 		}
 		result_rows_.push_back(std::move(row));
 	}
+	// [SOLUTION END]
 }
 
-void PhysicalHashAggregate::GetData(ExecutionContext &/*context*/, DataChunk &chunk, SourceInput &/*input*/) {
+void PhysicalHashAggregate::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput & /*input*/) {
+	// [SOLUTION BEGIN L3.T4]
 	idx_t offset = emit_offset_.fetch_add(STANDARD_VECTOR_SIZE);
 	if (offset >= result_rows_.size()) {
 		chunk.SetCardinality(0);
@@ -279,6 +352,7 @@ void PhysicalHashAggregate::GetData(ExecutionContext &/*context*/, DataChunk &ch
 		}
 	}
 	chunk.SetCardinality(count);
+	// [SOLUTION END]
 }
 
 } // namespace tiny_duckdb
