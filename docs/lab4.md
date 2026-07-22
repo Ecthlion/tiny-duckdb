@@ -41,15 +41,15 @@ lineitem/
 ### L4.T3 历史与时间旅行
 `history()` 列出全部提交；`scan_version(v)` 只重放到第 v 个提交为止，算出**当时**的活文件集再读。数据文件只增不删（compaction 之前），时间旅行就是免费的。
 
-### L4.T4 compaction（OPTIMIZE）
-流式写入会产生大量小文件（"小文件问题"）。`compact()`：把所有活文件用 DuckDB 重写成一个大文件 → 一个提交里同时 `remove` 全部旧文件、`add` 新文件（原子生效）→ **提交成功后**才物理删除旧文件。顺序为什么是"先提交后删除"？想想崩溃恢复：如果在删除前崩溃，表是否仍然正确？
+### L4.T4 compaction（OPTIMIZE）与 vacuum
+流式写入会产生大量小文件（"小文件问题"）。`compact()`：把所有活文件用 DuckDB 重写成一个大文件 → 一个提交里同时 `remove` 全部旧文件、`add` 新文件（原子生效）。注意旧文件只是**逻辑删除**，物理上仍留在磁盘——所以 compact 之后时间旅行依然有效。真正的物理删除交给 `vacuum()`：它删掉不在当前快照里的所有文件（Delta Lake 的 VACUUM 也一样，只是多一个保留期）。为什么必须"先提交、后（由 vacuum）删除"？想想崩溃恢复与时间旅行：如果 compact 直接删文件，会发生什么？
 
 ## 测试
 
 ```bash
 cd lab4_lakebase
 python3 -m pytest test_lakebase.py -v   # 10 个用例
-python3 demo.py                          # 完整演示：文件、历史、下推计划、时间旅行、compaction
+python3 demo.py                          # 完整演示：文件、历史、下推计划、时间旅行、compaction、vacuum
 ```
 
 ## 思考题
