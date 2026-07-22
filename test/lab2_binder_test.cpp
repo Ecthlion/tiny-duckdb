@@ -134,3 +134,49 @@ TEST(Lab2BinderTest, BindInsertCoercesTypes) {
 	// varchar into an INTEGER column is not
 	EXPECT_THROW(BindSql(*catalog, "INSERT INTO lineitem VALUES ('x', 2.0, 'A')"), BinderException);
 }
+
+TEST(Lab2BinderTest, BindArithmeticTypePromotion) {
+	auto catalog = MakeCatalog();
+	// INTEGER + DOUBLE promotes to DOUBLE; division always yields DOUBLE
+	auto promoted = BindSql(*catalog, "SELECT l_orderkey + l_quantity FROM lineitem");
+	EXPECT_EQ(promoted->types[0].Id(), LogicalTypeId::DOUBLE);
+	auto division = BindSql(*catalog, "SELECT l_orderkey / l_orderkey FROM lineitem");
+	EXPECT_EQ(division->types[0].Id(), LogicalTypeId::DOUBLE);
+	// arithmetic on non-numeric operands is rejected
+	EXPECT_THROW(BindSql(*catalog, "SELECT l_returnflag + 1 FROM lineitem"), BinderException);
+}
+
+TEST(Lab2BinderTest, BindAggregateArithmeticRewrite) {
+	auto catalog = MakeCatalog();
+	// sum(l_quantity) + 1: the addition is rewritten ABOVE the aggregation
+	auto bound = BindSql(*catalog, "SELECT sum(l_quantity) + 1 FROM lineitem");
+	ASSERT_EQ(bound->plan->type, LogicalOperatorType::LOGICAL_PROJECTION);
+	ASSERT_EQ(bound->plan->children[0]->type, LogicalOperatorType::LOGICAL_AGGREGATE);
+	auto &projection = static_cast<LogicalProjection &>(*bound->plan);
+	ASSERT_EQ(projection.expressions[0]->type, ExpressionType::OPERATOR_ADD);
+	auto &add = static_cast<BoundOperatorExpression &>(*projection.expressions[0]);
+	// the left operand is a reference to the aggregate's output column
+	EXPECT_EQ(add.left->type, ExpressionType::COLUMN_REF);
+	EXPECT_EQ(bound->types[0].Id(), LogicalTypeId::DOUBLE);
+}
+
+TEST(Lab2BinderTest, BindMultipleGroupKeys) {
+	auto catalog = MakeCatalog();
+	auto bound =
+	    BindSql(*catalog, "SELECT l_returnflag, l_orderkey, count(*) FROM lineitem GROUP BY l_returnflag, l_orderkey");
+	ASSERT_EQ(bound->plan->type, LogicalOperatorType::LOGICAL_PROJECTION);
+	ASSERT_EQ(bound->plan->children[0]->type, LogicalOperatorType::LOGICAL_AGGREGATE);
+	auto &aggregate = static_cast<LogicalAggregate &>(*bound->plan->children[0]);
+	EXPECT_EQ(aggregate.groups.size(), 2);
+	EXPECT_EQ(aggregate.aggregates.size(), 1);
+}
+
+TEST(Lab2BinderTest, BindStarOverJoin) {
+	auto catalog = MakeCatalog();
+	// SELECT * over a join exposes left columns then right columns
+	auto bound = BindSql(*catalog,
+	                     "SELECT * FROM orders JOIN customer ON orders.o_custkey = customer.o_custkey");
+	EXPECT_EQ(bound->names.size(), 4);
+	EXPECT_EQ(bound->names[0], "orders.o_orderkey");
+	EXPECT_EQ(bound->names[3], "customer.c_name");
+}
