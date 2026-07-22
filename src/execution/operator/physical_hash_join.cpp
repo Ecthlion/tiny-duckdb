@@ -4,6 +4,57 @@
 
 namespace tiny_duckdb {
 
+//! ============================================================================
+//! LAB 3 - TASK #5: the hash join (PhysicalHashJoin)
+//!
+//! The join plays BOTH pipeline roles. Its right (build) child drains into a
+//! dedicated pipeline whose SINK is the join itself; only after Finalize does
+//! the left (probe) pipeline start, where the join acts as a mid-pipeline
+//! OPERATOR. Look at PipelineBuilder (pipeline.cpp) to see this split.
+//!
+//! Output schema: all probe (left) columns, then all build (right) columns.
+//! SQL semantics: a NULL join key NEVER matches (on either side).
+//!
+//! ----------------------------------------------------------------------------
+//! Task L3.T5a - the build side (Sink / Combine / Finalize)
+//!
+//!   Sink(chunk):     evaluate the build key expressions (condition.second)
+//!                    vector-wise, then append one BuildRow {key, row} per
+//!                    input row to the thread-local list. Skip rows whose key
+//!                    contains NULL.
+//!   Combine:         move the thread-local rows into the global list
+//!                    (under global.lock).
+//!   Finalize:        build the hash table: hash_table_[key] -> list of row
+//!                    indexes into build_rows_. (Duplicates matter: one key
+//!                    can own many rows.)
+//!
+//! Hint: BuildRow and the hash table type are declared in the header
+//!       (physical_hash_join.hpp). KeyHasNull is provided below.
+//!
+//! ----------------------------------------------------------------------------
+//! Task L3.T5b - the probe side (Execute)
+//!
+//! For each input chunk evaluate the probe keys (condition.first), look each
+//! key up in the hash table and emit every (probe row, matching build row)
+//! combination into the output.
+//!
+//! THE TRICKY PART: one probe row can match MANY build rows, so one input
+//! chunk can produce more than STANDARD_VECTOR_SIZE output rows. Execute
+//! must emit at most STANDARD_VECTOR_SIZE values per call and RESUME where
+//! it stopped on the next call - the provided HashJoinProbeState keeps the
+//! pending input, the row cursor and the match cursor for exactly this.
+//! Return OperatorResultType::HAVE_MORE_OUTPUT while un-emitted matches
+//! remain (the pipeline then calls Execute again WITHOUT pulling a new
+//! source chunk), and OperatorResultType::NEED_MORE_INPUT once the pending
+//! input is fully consumed.
+//!
+//! Hint: structure it as two nested loops: outer over pending_input rows,
+//!       inner over current_matches; both bounded by STANDARD_VECTOR_SIZE.
+//! Hint: NULL probe keys never match - skip the lookup, not the row cursor.
+//!
+//! Tests: Lab3ExecutionTest.Join*
+//! ============================================================================
+
 size_t VectorValueHash::operator()(const std::vector<Value> &key) const {
 	uint64_t hash = 0;
 	for (const auto &value : key) {
@@ -77,17 +128,18 @@ PhysicalHashJoin::PhysicalHashJoin(
 // BUILD side (sink): materialize the right child into a hash table
 // ---------------------------------------------------------------------------
 
-std::unique_ptr<GlobalSinkState> PhysicalHashJoin::GetGlobalSinkState(ExecutionContext &/*context*/) {
+std::unique_ptr<GlobalSinkState> PhysicalHashJoin::GetGlobalSinkState(ExecutionContext & /*context*/) {
 	return std::make_unique<HashJoinGlobalSinkState>();
 }
 
-std::unique_ptr<LocalSinkState> PhysicalHashJoin::GetLocalSinkState(ExecutionContext &/*context*/,
-                                                                    GlobalSinkState &/*gstate*/) {
+std::unique_ptr<LocalSinkState> PhysicalHashJoin::GetLocalSinkState(ExecutionContext & /*context*/,
+                                                                    GlobalSinkState & /*gstate*/) {
 	return std::make_unique<HashJoinLocalSinkState>();
 }
 
-void PhysicalHashJoin::Sink(ExecutionContext &/*context*/, GlobalSinkState &/*gstate*/, LocalSinkState &lstate,
+void PhysicalHashJoin::Sink(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState &lstate,
                             DataChunk &chunk) {
+	// [SOLUTION BEGIN L3.T5]
 	auto &local = lstate.Cast<HashJoinLocalSinkState>();
 	// evaluate the build-side keys once per chunk (vectorized)
 	std::vector<std::unique_ptr<Vector>> key_vectors;
@@ -109,9 +161,11 @@ void PhysicalHashJoin::Sink(ExecutionContext &/*context*/, GlobalSinkState &/*gs
 		}
 		local.rows.push_back(std::move(build_row));
 	}
+	// [SOLUTION END]
 }
 
-void PhysicalHashJoin::Combine(ExecutionContext &/*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
+void PhysicalHashJoin::Combine(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
+	// [SOLUTION BEGIN L3.T5]
 	auto &global = gstate.Cast<HashJoinGlobalSinkState>();
 	auto &local = lstate.Cast<HashJoinLocalSinkState>();
 	std::lock_guard<std::mutex> guard(global.lock);
@@ -119,28 +173,32 @@ void PhysicalHashJoin::Combine(ExecutionContext &/*context*/, GlobalSinkState &g
 		global.rows.push_back(std::move(row));
 	}
 	local.rows.clear();
+	// [SOLUTION END]
 }
 
-void PhysicalHashJoin::Finalize(ExecutionContext &/*context*/, GlobalSinkState &gstate) {
+void PhysicalHashJoin::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
+	// [SOLUTION BEGIN L3.T5]
 	auto &global = gstate.Cast<HashJoinGlobalSinkState>();
 	build_rows_ = std::move(global.rows);
 	for (idx_t i = 0; i < build_rows_.size(); i++) {
 		hash_table_[build_rows_[i].key].push_back(i);
 	}
+	// [SOLUTION END]
 }
 
 // ---------------------------------------------------------------------------
 // PROBE side (operator): match incoming chunks against the hash table
 // ---------------------------------------------------------------------------
 
-std::unique_ptr<OperatorState> PhysicalHashJoin::GetOperatorState(ExecutionContext &/*context*/) {
+std::unique_ptr<OperatorState> PhysicalHashJoin::GetOperatorState(ExecutionContext & /*context*/) {
 	auto result = std::make_unique<HashJoinProbeState>();
 	result->pending_input.Initialize(probe_types);
 	result->output.Initialize(types);
 	return result;
 }
 
-void PhysicalHashJoin::Execute(ExecutionContext &/*context*/, DataChunk &chunk, OperatorState &state) {
+OperatorResultType PhysicalHashJoin::Execute(ExecutionContext & /*context*/, DataChunk &chunk, OperatorState &state) {
+	// [SOLUTION BEGIN L3.T5]
 	auto &probe = state.Cast<HashJoinProbeState>();
 	if (!probe.has_pending) {
 		// new input chunk: stash it and pre-compute the probe keys
@@ -197,6 +255,9 @@ void PhysicalHashJoin::Execute(ExecutionContext &/*context*/, DataChunk &chunk, 
 	probe.output.SetCardinality(output_count);
 	chunk = std::move(probe.output);
 	probe.output.Initialize(types);
+	// still holding un-emitted matches? ask the pipeline to call us again
+	return probe.has_pending ? OperatorResultType::HAVE_MORE_OUTPUT : OperatorResultType::NEED_MORE_INPUT;
+	// [SOLUTION END]
 }
 
 } // namespace tiny_duckdb
