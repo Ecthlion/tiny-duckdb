@@ -206,3 +206,53 @@ TEST(Lab1StorageTest, TableScanRoundTrip) {
 		EXPECT_EQ(out.GetValue(1, i), Value::Varchar("str_" + std::to_string(10 + i)));
 	}
 }
+
+TEST(Lab1StorageTest, ColumnChunkEmptyScan) {
+	ColumnChunk chunk(LogicalType::Integer());
+	EXPECT_EQ(chunk.Count(), 0);
+	Vector out(LogicalType::Integer());
+	chunk.Scan(0, 0, out, 0);
+	// zone map of an empty chunk never prunes
+	EXPECT_TRUE(chunk.CheckZoneMap(Value::Integer(42), ExpressionType::COMPARE_EQUAL));
+}
+
+TEST(Lab1StorageTest, ColumnChunkPartialAppends) {
+	ColumnChunk chunk(LogicalType::Integer());
+	// append in three uneven slices: 5 + 3 + 2 = 10
+	auto a = MakeIntVector(0, 5);
+	chunk.Append(a, 0, 5);
+	auto b = MakeIntVector(5, 3);
+	chunk.Append(b, 0, 3);
+	auto c = MakeIntVector(8, 2);
+	chunk.Append(c, 0, 2);
+	EXPECT_EQ(chunk.Count(), 10);
+	Vector out(LogicalType::Integer());
+	chunk.Scan(0, 10, out, 0);
+	for (idx_t i = 0; i < 10; i++) {
+		EXPECT_EQ(out.GetValue(i), Value::Integer(static_cast<int32_t>(i)));
+	}
+}
+
+TEST(Lab1StorageTest, ZoneMapVarchar) {
+	ColumnChunk chunk(LogicalType::Varchar());
+	Vector data(LogicalType::Varchar());
+	data.SetValue(0, Value::Varchar("banana"));
+	data.SetValue(1, Value::Varchar("apple"));
+	data.SetValue(2, Value::Varchar("cherry"));
+	chunk.Append(data, 0, 3);
+	EXPECT_EQ(chunk.Min(), Value::Varchar("apple"));
+	EXPECT_EQ(chunk.Max(), Value::Varchar("cherry"));
+	// col = 'zebra' impossible (beyond max); col = 'aaa' impossible (below min)
+	EXPECT_FALSE(chunk.CheckZoneMap(Value::Varchar("zebra"), ExpressionType::COMPARE_EQUAL));
+	EXPECT_FALSE(chunk.CheckZoneMap(Value::Varchar("aaa"), ExpressionType::COMPARE_EQUAL));
+	EXPECT_TRUE(chunk.CheckZoneMap(Value::Varchar("banana"), ExpressionType::COMPARE_EQUAL));
+}
+
+TEST(Lab1StorageTest, EmptyTableHasNoMorsels) {
+	auto table = MakeTable(0);
+	EXPECT_EQ(table->RowCount(), 0);
+	EXPECT_EQ(table->RowGroupCount(), 0);
+	auto state = table->CreateParallelScanState();
+	TableScanMorsel morsel;
+	EXPECT_FALSE(state->NextMorsel(morsel));
+}
