@@ -55,7 +55,7 @@ public:
 
 	// --- operator interface (probe side) ---
 	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context) override;
-	void Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
+	OperatorResultType Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
 
 	//! (probe-side expression, build-side expression)
 	std::vector<std::pair<std::unique_ptr<BoundExpression>, std::unique_ptr<BoundExpression>>> conditions;

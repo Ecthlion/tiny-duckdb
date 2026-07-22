@@ -37,12 +37,25 @@ private:
 };
 
 //! ============================================================================
-//! LAB 1 - Columnar storage
+//! LAB 1 - Columnar storage: the TableData
 //!
 //! A table: a schema plus a list of row groups.
 //!
-//! Task L1.T5: TableData::Append - split incoming chunks across row groups,
-//!             creating new row groups when the current one is full.
+//! ----------------------------------------------------------------------------
+//! Task L1.T5 - TableData::Append
+//!
+//! Append an entire DataChunk to the table, splitting it across row groups:
+//! fill the current (last) row group until it reaches ROW_GROUP_SIZE rows,
+//! then create a new row group and continue, until the chunk is consumed.
+//! Append is called concurrently by the Lab 3 insert path - take lock_ (a
+//! std::mutex) for the whole operation.
+//!
+//! Hint: RowGroup::CapacityLeft() tells you how many rows still fit; use the
+//!       (chunk, source_offset, count) overload of RowGroup::Append for the
+//!       middle slices.
+//!
+//! Tests: Lab1StorageTest.TableDataSplitsRowGroups / TableScanRoundTrip /
+//!        TableScanMorselsCoverAllRows (and every Lab 3 test inserts data)
 //! ============================================================================
 class TableData {
 public:
