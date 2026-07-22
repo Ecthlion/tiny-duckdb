@@ -5,11 +5,53 @@
 namespace tiny_duckdb {
 
 //! ============================================================================
-//! LAB 3 (Task L3.T1) - the ExpressionExecutor: implementation notes
+//! LAB 3 - TASK #1: the ExpressionExecutor
 //!
 //! Everything goes through Vector::GetValue/SetValue here. This is slower
 //! than DuckDB's specialized tight loops over raw arrays, but much easier to
 //! read. Specializing hot paths per type is left as an exercise (docs/lab3.md).
+//!
+//! ----------------------------------------------------------------------------
+//! Task L3.T1a - ExpressionExecutor::Evaluate
+//!
+//! Evaluate a bound expression tree against an input DataChunk and write the
+//! results (one value per input row) into `result`. Handle these expression
+//! types (expr.type):
+//!
+//!   COLUMN_REF       copy input column BoundColumnRefExpression::column_index
+//!                    of `chunk` into `result`, row by row
+//!   VALUE_CONSTANT   broadcast BoundConstantExpression::value to every row
+//!   COMPARE_*        recursively evaluate left/right into two scratch
+//!                    Vectors, then compare row-wise; if EITHER side is NULL
+//!                    the result is NULL (Value::Null(LogicalType::Boolean()))
+//!   CONJUNCTION_AND/OR
+//!                    recursively evaluate left/right as booleans; simplified
+//!                    three-valued logic: a NULL input counts as false, the
+//!                    result itself is never NULL
+//!   OPERATOR_ADD/SUBTRACT/MULTIPLY/DIVIDE
+//!                    recursive evaluation, then combine row-wise with
+//!                    Value::Add / Value::Subtract / Value::Multiply /
+//!                    Value::Divide (these already propagate NULL)
+//!
+//! Hint: the comparison dispatch is already written for you below
+//!       (EvaluateComparison) - call it with expr.type and the two Values.
+//! Hint: Vector's constructor takes the LogicalType of the values it holds;
+//!       allocate scratch vectors with the child's return_type.
+//! Hint: useful Value methods: IsNull, GetBoolean, Equals, LessThan.
+//!
+//! Tests: Lab3ExecutionTest.ExpressionEvaluator* (lab3_execution_test.cpp)
+//!
+//! ----------------------------------------------------------------------------
+//! Task L3.T1b - ExpressionExecutor::Select
+//!
+//! Evaluate a boolean expression and record the indexes of the rows where it
+//! is TRUE into `sel` (a SelectionVector); return the number of matches.
+//! NULL results do NOT match. This is the workhorse behind the WHERE clause
+//! and the zone-map-less filtering in PhysicalFilter.
+//!
+//! Hint: evaluate the expression into a boolean Vector first, then walk it.
+//!
+//! Tests: Lab3ExecutionTest.ExpressionEvaluatorSelect*
 //! ============================================================================
 
 static bool EvaluateComparison(ExpressionType comparison, const Value &left, const Value &right) {
@@ -33,6 +75,7 @@ static bool EvaluateComparison(ExpressionType comparison, const Value &left, con
 }
 
 void ExpressionExecutor::Evaluate(const BoundExpression &expr, DataChunk &chunk, Vector &result) {
+	// [SOLUTION BEGIN L3.T1]
 	switch (expr.type) {
 	case ExpressionType::COLUMN_REF: {
 		auto &col_expr = expr.Cast<BoundColumnRefExpression>();
@@ -124,9 +167,11 @@ void ExpressionExecutor::Evaluate(const BoundExpression &expr, DataChunk &chunk,
 	default:
 		throw ExecutorException("ExpressionExecutor: unsupported expression type");
 	}
+	// [SOLUTION END]
 }
 
 idx_t ExpressionExecutor::Select(const BoundExpression &expr, DataChunk &chunk, SelectionVector &sel) {
+	// [SOLUTION BEGIN L3.T1]
 	Vector result(LogicalType::Boolean());
 	Evaluate(expr, chunk, result);
 	idx_t match_count = 0;
@@ -137,6 +182,7 @@ idx_t ExpressionExecutor::Select(const BoundExpression &expr, DataChunk &chunk, 
 		}
 	}
 	return match_count;
+	// [SOLUTION END]
 }
 
 } // namespace tiny_duckdb
