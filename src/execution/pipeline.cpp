@@ -1,5 +1,7 @@
 #include "tiny_duckdb/execution/pipeline.hpp"
 
+#include <exception>
+#include <mutex>
 #include <thread>
 
 #include "tiny_duckdb/common/exception.hpp"
@@ -18,17 +20,38 @@ void Pipeline::Execute(TinyDuckDB &db, idx_t thread_count) {
 	if (sink) {
 		global_sink = sink->GetGlobalSinkState(context);
 	}
-	// main thread + (thread_count - 1) workers, all pulling morsels
+	// main thread + (thread_count - 1) workers, all pulling morsels.
+	// Capture worker exceptions and rethrow on the calling thread (DuckDB's
+	// Executor does the same): an exception escaping a std::thread - or a
+	// main-thread throw while workers are still joinable - is std::terminate.
 	std::vector<std::thread> workers;
+	std::mutex error_lock;
+	std::vector<std::exception_ptr> worker_errors;
 	for (idx_t t = 1; t < thread_count; t++) {
-		workers.emplace_back([this, &db, t, &global_source, &global_sink] {
-			ExecutionContext worker_context(db, t);
-			ExecuteWorker(worker_context, global_source.get(), global_sink.get());
+		workers.emplace_back([this, &db, t, &global_source, &global_sink, &error_lock, &worker_errors] {
+			try {
+				ExecutionContext worker_context(db, t);
+				ExecuteWorker(worker_context, global_source.get(), global_sink.get());
+			} catch (...) {
+				std::lock_guard<std::mutex> guard(error_lock);
+				worker_errors.push_back(std::current_exception());
+			}
 		});
 	}
-	ExecuteWorker(context, global_source.get(), global_sink.get());
+	std::exception_ptr main_error;
+	try {
+		ExecuteWorker(context, global_source.get(), global_sink.get());
+	} catch (...) {
+		main_error = std::current_exception();
+	}
 	for (auto &worker : workers) {
 		worker.join();
+	}
+	if (main_error) {
+		std::rethrow_exception(main_error);
+	}
+	if (!worker_errors.empty()) {
+		std::rethrow_exception(worker_errors.front());
 	}
 	if (sink) {
 		sink->Finalize(context, *global_sink);

@@ -36,9 +36,15 @@ TEST(Lab0MorselTest, ConcurrentExactlyOnce) {
 	std::vector<std::thread> threads;
 	for (idx_t t = 0; t < 4; t++) {
 		threads.emplace_back([&queue, &per_thread, t] {
-			idx_t morsel;
-			while (queue.NextMorsel(morsel)) {
-				per_thread[t].push_back(morsel);
+			// the L0.T1 stub throws until implemented; swallow it here so the
+			// student edition reports a normal test failure instead of
+			// terminating (an exception escaping a thread is std::terminate)
+			try {
+				idx_t morsel;
+				while (queue.NextMorsel(morsel)) {
+					per_thread[t].push_back(morsel);
+				}
+			} catch (const std::exception &) {
 			}
 		});
 	}
