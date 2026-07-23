@@ -9,6 +9,7 @@ tiny_duckdb_shell
 __pycache__/
 *.pyc
 .pytest_cache/
+.venv/
 
 # misc
 .DS_Store
