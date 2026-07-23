@@ -8,7 +8,7 @@ tiny-duckdb 的 C++ 部分只依赖 C++17 编译器、Make 或 CMake，测试框
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential cmake git python3 python3-venv python3-pip
+sudo apt install -y build-essential cmake git clang-format python3 python3-venv python3-pip
 ```
 
 确认版本：
@@ -68,6 +68,7 @@ macOS 没有 Linux 的 `nproc`，不要直接复制 `make -j$(nproc)`。不想�
 
 ```bash
 brew install cmake python
+brew install clang-format
 cmake -S . -B cmake-build -DCMAKE_BUILD_TYPE=Debug
 cmake --build cmake-build -j
 ctest --test-dir cmake-build --output-on-failure
@@ -114,6 +115,18 @@ make test
 
 # 5. 手工执行 SQL
 ./tiny_duckdb_shell
+```
+
+建议在提交前同时做一次格式检查：
+
+```bash
+make format-check
+```
+
+如果希望本地每次 `git commit` 自动运行 clang-format，可在仓库内启用 hook：
+
+```bash
+make install-hooks
 ```
 
 测试过滤器做的是名称子串匹配。比如 `./tdbtest Lab5` 会运行 Lab 5 的全部用例，`./tdbtest Lab5VectorExpressionTest.DistanceKernels` 只运行一个任务组。
