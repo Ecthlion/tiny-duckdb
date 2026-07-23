@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format (ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Install clang-format (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew list clang-format >/dev/null 2>&1 || brew install clang-format
+
+      - name: clang-format check
+        run: make format-check
+
+      - name: build
+        run: make -j2
+
+      - name: test (answer only)
+        if: github.ref_name == 'answer' || github.head_ref == 'answer'
+        run: make test
+
+      - name: lab4 pytest (answer + ubuntu only)
+        if: (github.ref_name == 'answer' || github.head_ref == 'answer') && runner.os == 'Linux'
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install duckdb pytest
+          cd lab4_lakebase
+          python -m pytest test_lakebase.py -v

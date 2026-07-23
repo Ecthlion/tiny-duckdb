@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v clang-format >/dev/null 2>&1; then
+	echo "clang-format not found in PATH" >&2
+	exit 2
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+readarray -t files < <(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|h)$' || true)
+if [[ ${#files[@]} -eq 0 ]]; then
+	exit 0
+fi
+
+clang-format -i "${files[@]}"
+git add "${files[@]}"

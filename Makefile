@@ -10,6 +10,7 @@ TEST_SRC := $(wildcard test/*.cpp)
 TEST_OBJ := $(patsubst %.cpp,build/%.o,$(TEST_SRC))
 
 .PHONY: all test shell clean
+.PHONY: format format-check install-hooks
 
 all: tdbtest tiny_duckdb_shell
 
@@ -28,6 +29,15 @@ tiny_duckdb_shell: app/shell.cpp libtiny_duckdb.a
 
 test: tdbtest
 	./tdbtest
+
+format:
+	bash tools/clang_format.sh
+
+format-check:
+	bash tools/clang_format_check.sh
+
+install-hooks:
+	bash tools/setup_git_hooks.sh
 
 clean:
 	rm -rf build libtiny_duckdb.a tdbtest tiny_duckdb_shell
