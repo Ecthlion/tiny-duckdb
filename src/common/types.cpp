@@ -4,14 +4,24 @@
 
 namespace tiny_duckdb {
 
-LogicalType::LogicalType() : id_(LogicalTypeId::INTEGER) {
+LogicalType::LogicalType() : id_(LogicalTypeId::INTEGER), vector_size_(0) {
 }
 
-LogicalType::LogicalType(LogicalTypeId id) : id_(id) {
+LogicalType::LogicalType(LogicalTypeId id, idx_t vector_size) : id_(id), vector_size_(vector_size) {
+	if (id_ == LogicalTypeId::VECTOR && vector_size_ == 0) {
+		throw StorageException("VECTOR dimension must be greater than zero");
+	}
 }
 
 LogicalTypeId LogicalType::Id() const {
 	return id_;
+}
+
+idx_t LogicalType::VectorSize() const {
+	if (id_ != LogicalTypeId::VECTOR) {
+		throw StorageException("VectorSize called on non-VECTOR type");
+	}
+	return vector_size_;
 }
 
 idx_t LogicalType::FixedSize() const {
@@ -25,6 +35,7 @@ idx_t LogicalType::FixedSize() const {
 	case LogicalTypeId::DOUBLE:
 		return sizeof(double);
 	case LogicalTypeId::VARCHAR:
+	case LogicalTypeId::VECTOR:
 		return 0;
 	}
 	throw StorageException("Unknown logical type");
@@ -50,6 +61,8 @@ std::string LogicalType::ToString() const {
 		return "DOUBLE";
 	case LogicalTypeId::VARCHAR:
 		return "VARCHAR";
+	case LogicalTypeId::VECTOR:
+		return "VECTOR(" + std::to_string(vector_size_) + ")";
 	}
 	return "UNKNOWN";
 }
@@ -74,12 +87,16 @@ LogicalType LogicalType::Varchar() {
 	return LogicalType(LogicalTypeId::VARCHAR);
 }
 
+LogicalType LogicalType::Vector(idx_t size) {
+	return LogicalType(LogicalTypeId::VECTOR, size);
+}
+
 bool LogicalType::operator==(const LogicalType &rhs) const {
-	return id_ == rhs.id_;
+	return id_ == rhs.id_ && (id_ != LogicalTypeId::VECTOR || vector_size_ == rhs.vector_size_);
 }
 
 bool LogicalType::operator!=(const LogicalType &rhs) const {
-	return id_ != rhs.id_;
+	return !(*this == rhs);
 }
 
 } // namespace tiny_duckdb

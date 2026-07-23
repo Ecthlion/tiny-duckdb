@@ -111,6 +111,28 @@ public:
 	}
 };
 
+enum class VectorDistanceType : uint8_t { L2, COSINE, NEGATIVE_INNER_PRODUCT };
+
+//! A scalar distance expression over two fixed-length VECTOR values.
+class BoundVectorDistanceExpression : public BoundExpression {
+public:
+	BoundVectorDistanceExpression(VectorDistanceType distance_type_p, std::unique_ptr<BoundExpression> left_p,
+	                              std::unique_ptr<BoundExpression> right_p, std::string function_name_p)
+	    : BoundExpression(ExpressionType::VECTOR_DISTANCE, LogicalType::Double()),
+	      distance_type(distance_type_p), left(std::move(left_p)), right(std::move(right_p)),
+	      function_name(std::move(function_name_p)) {
+	}
+
+	VectorDistanceType distance_type;
+	std::unique_ptr<BoundExpression> left;
+	std::unique_ptr<BoundExpression> right;
+	std::string function_name;
+
+	std::string ToString() const override {
+		return function_name + "(" + left->ToString() + ", " + right->ToString() + ")";
+	}
+};
+
 //! An aggregate function over child rows. child is null for count(*).
 class BoundAggregateExpression : public BoundExpression {
 public:

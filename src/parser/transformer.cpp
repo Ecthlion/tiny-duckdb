@@ -90,6 +90,19 @@ std::unique_ptr<Expression> Transformer::TransformLiteral(const peg::Ast &node) 
 	// [SOLUTION BEGIN L2.T5]
 	if (!node.children.empty()) {
 		const peg::Ast &child = *node.children[0];
+		if (child.name == "VectorLiteral") {
+			std::vector<double> elements;
+			for (const peg::Ast *element : child.FindAll("VectorElement")) {
+				const peg::Ast *number = element->Find("Number");
+				if (number == nullptr) {
+					throw ParserException("Malformed VECTOR element");
+				}
+				const bool negative = element->token.find('-') != std::string::npos;
+				const double value = std::stod(number->token);
+				elements.push_back(negative ? -value : value);
+			}
+			return std::make_unique<ConstantExpression>(Value::Vector(std::move(elements)));
+		}
 		if (child.name == "Number") {
 			if (child.token.find('.') != std::string::npos) {
 				return std::make_unique<ConstantExpression>(Value::Double(std::stod(child.token)));
@@ -330,8 +343,13 @@ std::unique_ptr<CreateTableStatement> Transformer::TransformCreateTable(const pe
 	for (const peg::Ast *definition : node.FindAll("ColumnDef")) {
 		ColumnDefinition column;
 		column.name = definition->Find("Identifier")->token;
-		const std::string type_name = Lowercase(definition->Find("TypeName")->token);
-		if (type_name == "integer" || type_name == "int") {
+		const peg::Ast *type_node = definition->Find("TypeName");
+		const peg::Ast *vector_type = type_node->Find("VectorType");
+		const std::string type_name = Lowercase(type_node->token);
+		if (vector_type != nullptr) {
+			const idx_t dimension = std::stoull(vector_type->Find("ArraySize")->token);
+			column.type = LogicalType::Vector(dimension);
+		} else if (type_name == "integer" || type_name == "int") {
 			column.type = LogicalType::Integer();
 		} else if (type_name == "bigint") {
 			column.type = LogicalType::BigInt();

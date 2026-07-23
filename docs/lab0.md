@@ -2,6 +2,7 @@
 
 > 对应代码：`src/include/tiny_duckdb/execution/morsel_queue.hpp`
 > 对应测试：`test/lab0_morsel_test.cpp`（5 个用例）
+> 卡住时按层查看：[Lab 0 渐进式 Hints](hints/lab0-hints.md)
 
 ## Overview
 

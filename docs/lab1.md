@@ -2,6 +2,7 @@
 
 > 对应代码：`src/storage/column_chunk.cpp`、`src/storage/row_group.cpp`、`src/storage/table_data.cpp`（头文件在 `src/include/tiny_duckdb/storage/`，**任务说明写在头文件里**）
 > 对应测试：`test/lab1_storage_test.cpp`（16 个用例）
+> 卡住时按任务查看：[Lab 1 渐进式 Hints](hints/lab1-hints.md)
 
 ## Overview
 

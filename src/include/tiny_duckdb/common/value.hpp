@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <ostream>
 #include <string>
+#include <vector>
 
 #include "tiny_duckdb/common/types.hpp"
 
@@ -19,6 +20,7 @@ public:
 	static Value BigInt(int64_t val);
 	static Value Double(double val);
 	static Value Varchar(const std::string &val);
+	static Value Vector(std::vector<double> val);
 
 	//! Create a NULL INTEGER value
 	Value();
@@ -31,6 +33,7 @@ public:
 	int64_t GetBigInt() const;
 	double GetDouble() const;
 	const std::string &GetVarchar() const;
+	const std::vector<double> &GetVector() const;
 	//! Numeric coercion: INTEGER/BIGINT/DOUBLE -> double. Throws for other types.
 	double GetNumeric() const;
 	int64_t GetIntegral() const;
@@ -64,6 +67,7 @@ private:
 	int64_t bigint_value_;
 	double double_value_;
 	std::string string_value_;
+	std::vector<double> vector_value_;
 };
 
 std::ostream &operator<<(std::ostream &os, const Value &value);

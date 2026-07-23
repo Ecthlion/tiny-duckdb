@@ -73,6 +73,7 @@ private:
 	LogicalType type_;
 	std::unique_ptr<uint8_t[]> data_;
 	std::vector<std::string> string_heap_;
+	std::vector<std::vector<double>> vector_heap_;
 	ValidityMask validity_;
 };
 

@@ -45,12 +45,22 @@ bool IsAggregateName(const std::string &name) {
 	return lowered == "count" || lowered == "sum" || lowered == "avg" || lowered == "min" || lowered == "max";
 }
 
+bool IsVectorDistanceName(const std::string &name) {
+	const std::string lowered = Normalize(name);
+	return lowered == "l2_distance" || lowered == "array_distance" ||
+	       lowered == "cosine_distance" || lowered == "array_cosine_distance" ||
+	       lowered == "negative_inner_product" || lowered == "array_negative_inner_product";
+}
+
 bool ContainsAggregate(Expression &expression) {
 	if (expression.type == ExpressionType::AGGREGATE_COUNT) {
 		// FunctionExpression stores AGGREGATE_COUNT as a placeholder type
 		auto &function = static_cast<FunctionExpression &>(expression);
 		if (IsAggregateName(function.name)) {
 			return true;
+		}
+		if (IsVectorDistanceName(function.name)) {
+			return false;
 		}
 		throw BinderException("Unknown function: " + function.name);
 	}
@@ -81,6 +91,40 @@ void SplitConjunction(Expression &expression, std::vector<Expression *> &conjunc
 }
 
 } // namespace
+
+//! LAB 5 - TASK #2: bind a scalar vector-distance function. This is where
+//! arity, VECTOR argument types, and equal dimensions are checked before any
+//! rows are scanned.
+std::unique_ptr<BoundExpression> Binder::BindVectorDistance(FunctionExpression &function,
+                                                            const BindScope &scope) {
+	// [SOLUTION BEGIN L5.T2]
+	const std::string name = Normalize(function.name);
+	if (!IsVectorDistanceName(name)) {
+		throw BinderException("Unknown vector function: " + function.name);
+	}
+	if (function.is_star || function.args.size() != 2) {
+		throw BinderException(name + " takes exactly two VECTOR arguments");
+	}
+	auto left = BindExpression(*function.args[0], scope);
+	auto right = BindExpression(*function.args[1], scope);
+	if (left->return_type.Id() != LogicalTypeId::VECTOR || right->return_type.Id() != LogicalTypeId::VECTOR) {
+		throw BinderException(name + " requires VECTOR arguments, got " + left->return_type.ToString() +
+		                      " and " + right->return_type.ToString());
+	}
+	if (left->return_type != right->return_type) {
+		throw BinderException(name + " requires equal dimensions, got " + left->return_type.ToString() +
+		                      " and " + right->return_type.ToString());
+	}
+	VectorDistanceType distance_type = VectorDistanceType::L2;
+	if (name == "cosine_distance" || name == "array_cosine_distance") {
+		distance_type = VectorDistanceType::COSINE;
+	} else if (name == "negative_inner_product" || name == "array_negative_inner_product") {
+		distance_type = VectorDistanceType::NEGATIVE_INNER_PRODUCT;
+	}
+	return std::make_unique<BoundVectorDistanceExpression>(distance_type, std::move(left), std::move(right),
+	                                                       name);
+	// [SOLUTION END]
+}
 
 //! ----------------------------------------------------------------------------
 //! Task L2.T8a - Binder::BindExpression
@@ -158,6 +202,9 @@ std::unique_ptr<BoundExpression> Binder::BindExpression(Expression &expression, 
 	case ExpressionType::AGGREGATE_COUNT: {
 		// a FunctionExpression reached outside the aggregation rewrite
 		auto &function = static_cast<FunctionExpression &>(expression);
+		if (IsVectorDistanceName(function.name)) {
+			return BindVectorDistance(function, scope);
+		}
 		if (IsAggregateName(function.name)) {
 			throw BinderException("Aggregate " + function.name + " is not allowed in this clause");
 		}
@@ -600,6 +647,13 @@ std::unique_ptr<BoundStatement> Binder::BindInsert(InsertStatement &statement) {
 			case LogicalTypeId::BOOLEAN:
 				if (value.GetType().Id() != LogicalTypeId::BOOLEAN) {
 					throw BinderException("Cannot insert " + value.GetType().ToString() + " into BOOLEAN column");
+				}
+				values.push_back(value);
+				break;
+			case LogicalTypeId::VECTOR:
+				if (value.GetType() != target) {
+					throw BinderException("Cannot insert " + value.GetType().ToString() + " into " +
+					                      target.ToString() + " column");
 				}
 				values.push_back(value);
 				break;

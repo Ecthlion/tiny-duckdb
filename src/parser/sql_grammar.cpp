@@ -55,7 +55,9 @@ LimitClause     <- 'limit' Number
 # --- CREATE TABLE / INSERT (provided) ---
 CreateTableStmt <- 'create' 'table' Identifier '(' ColumnDef (',' ColumnDef)* ')'
 ColumnDef       <- Identifier TypeName
-TypeName        <- 'integer' / 'int' / 'bigint' / 'double' / 'real' / 'varchar' / 'text' / 'boolean' / 'bool'
+TypeName        <- VectorType / 'integer' / 'int' / 'bigint' / 'double' / 'real' / 'varchar' / 'text' / 'boolean' / 'bool'
+VectorType      <- 'vector' '(' ArraySize ')'
+ArraySize       <- [1-9] [0-9]*
 InsertStmt      <- 'insert' 'into' Identifier 'values' RowList
 RowList         <- Row (',' Row)*
 Row             <- '(' Literal (',' Literal)* ')'
@@ -73,12 +75,14 @@ MultOp          <- '*' / '/'
 UnaryExpr       <- '-' UnaryExpr / PrimaryExpr
 PrimaryExpr     <- '(' Expression ')' / FuncCall / Literal / ColumnRef
 FuncCall        <- Identifier '(' (Star / Expression (',' Expression)*)? ')'
-Literal         <- Number / String / 'true' / 'false' / 'null'
+Literal         <- VectorLiteral / Number / String / 'true' / 'false' / 'null'
+VectorLiteral   <- '[' VectorElement (',' VectorElement)* ']'
+VectorElement   <- '-'? Number
 ColumnRef       <- Identifier ('.' Identifier)?
 Number          <- [0-9]+ ('.' [0-9]+)?
 String          <- ['] (!['] .)* [']
 Identifier      <- !Keyword [a-zA-Z_] [a-zA-Z0-9_]*
-Keyword         <- 'select' / 'from' / 'where' / 'group' / 'by' / 'order' / 'asc' / 'desc' / 'limit' / 'inner' / 'join' / 'on' / 'as' / 'and' / 'or' / 'create' / 'table' / 'insert' / 'into' / 'values' / 'true' / 'false' / 'null'
+Keyword         <- 'select' / 'from' / 'where' / 'group' / 'by' / 'order' / 'asc' / 'desc' / 'limit' / 'inner' / 'join' / 'on' / 'as' / 'and' / 'or' / 'create' / 'table' / 'insert' / 'into' / 'values' / 'true' / 'false' / 'null' / 'vector'
 )GRAMMAR";
 	// [SOLUTION END]
 }

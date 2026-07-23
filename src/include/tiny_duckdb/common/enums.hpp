@@ -32,7 +32,9 @@ enum class ExpressionType : uint8_t {
 	AGGREGATE_MIN = 18,
 	AGGREGATE_MAX = 19,
 	// cast
-	OPERATOR_CAST = 20
+	OPERATOR_CAST = 20,
+	// scalar vector-distance functions (Lab 5)
+	VECTOR_DISTANCE = 21
 };
 
 //! Physical operator types (used to decide sink/source behaviour)

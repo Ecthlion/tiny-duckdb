@@ -8,7 +8,7 @@
 # replacing it with a NotImplementedException stub (C++) or a `raise` (Python),
 # so students get a compiling skeleton with tasks to fill in.
 #
-# Usage: ./tools/strip_solutions.sh [output_dir]   (default: ../tiny-duckdb-student)
+# Usage: bash tools/strip_solutions.sh [output_dir]   (default: ../tiny-duckdb-student)
 set -euo pipefail
 
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"

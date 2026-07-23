@@ -74,6 +74,7 @@ private:
 	std::unique_ptr<BoundStatement> BindInsert(InsertStatement &statement);
 
 	std::unique_ptr<BoundExpression> BindExpression(Expression &expression, const BindScope &scope);
+	std::unique_ptr<BoundExpression> BindVectorDistance(FunctionExpression &function, const BindScope &scope);
 	std::unique_ptr<BoundAggregateExpression> BindAggregate(FunctionExpression &function, const BindScope &scope);
 	//! Rewrite a select-list expression to run above the aggregation node
 	std::unique_ptr<BoundExpression> RewriteAfterAggregate(

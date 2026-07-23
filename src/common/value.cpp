@@ -53,6 +53,16 @@ Value Value::Varchar(const std::string &val) {
 	return result;
 }
 
+Value Value::Vector(std::vector<double> val) {
+	if (val.empty()) {
+		throw ExecutorException("VECTOR value must contain at least one element");
+	}
+	Value result(LogicalType::Vector(val.size()));
+	result.is_null_ = false;
+	result.vector_value_ = std::move(val);
+	return result;
+}
+
 bool Value::IsNull() const {
 	return is_null_;
 }
@@ -96,6 +106,13 @@ const std::string &Value::GetVarchar() const {
 	return string_value_;
 }
 
+const std::vector<double> &Value::GetVector() const {
+	if (type_.Id() != LogicalTypeId::VECTOR) {
+		throw ExecutorException("GetVector on non-vector value");
+	}
+	return vector_value_;
+}
+
 double Value::GetNumeric() const {
 	switch (type_.Id()) {
 	case LogicalTypeId::INTEGER:
@@ -120,6 +137,15 @@ int64_t Value::GetIntegral() const {
 	}
 }
 
+static std::string DoubleToString(double value) {
+	std::string str = std::to_string(value);
+	str.erase(str.find_last_not_of('0') + 1);
+	if (!str.empty() && str.back() == '.') {
+		str.push_back('0');
+	}
+	return str;
+}
+
 std::string Value::ToString() const {
 	if (is_null_) {
 		return "NULL";
@@ -132,15 +158,20 @@ std::string Value::ToString() const {
 	case LogicalTypeId::BIGINT:
 		return std::to_string(bigint_value_);
 	case LogicalTypeId::DOUBLE: {
-		std::string str = std::to_string(double_value_);
-		str.erase(str.find_last_not_of('0') + 1);
-		if (!str.empty() && str.back() == '.') {
-			str.push_back('0');
-		}
-		return str;
+		return DoubleToString(double_value_);
 	}
 	case LogicalTypeId::VARCHAR:
 		return string_value_;
+	case LogicalTypeId::VECTOR: {
+		std::string result = "[";
+		for (idx_t i = 0; i < vector_value_.size(); i++) {
+			if (i > 0) {
+				result += ", ";
+			}
+			result += DoubleToString(vector_value_[i]);
+		}
+		return result + "]";
+	}
 	}
 	return "?";
 }
@@ -158,6 +189,9 @@ bool Value::Equals(const Value &left, const Value &right) {
 	if (left.type_.Id() == LogicalTypeId::BOOLEAN) {
 		return left.bool_value_ == right.bool_value_;
 	}
+	if (left.type_.Id() == LogicalTypeId::VECTOR) {
+		return left.vector_value_ == right.vector_value_;
+	}
 	return left.string_value_ == right.string_value_;
 }
 
@@ -174,6 +208,9 @@ bool Value::LessThan(const Value &left, const Value &right) {
 	if (left.type_.Id() == LogicalTypeId::BOOLEAN) {
 		return !left.bool_value_ && right.bool_value_;
 	}
+	if (left.type_.Id() == LogicalTypeId::VECTOR) {
+		return left.vector_value_ < right.vector_value_;
+	}
 	return left.string_value_ < right.string_value_;
 }
 
@@ -186,6 +223,13 @@ uint64_t Value::Hash() const {
 	}
 	if (type_.Id() == LogicalTypeId::BOOLEAN) {
 		return std::hash<bool> {}(bool_value_);
+	}
+	if (type_.Id() == LogicalTypeId::VECTOR) {
+		uint64_t hash = 0xcbf29ce484222325ULL;
+		for (const double element : vector_value_) {
+			hash ^= std::hash<double> {}(element) + 0x9e3779b97f4a7c15ULL + (hash << 6U) + (hash >> 2U);
+		}
+		return hash;
 	}
 	return std::hash<std::string> {}(string_value_);
 }

@@ -85,8 +85,10 @@ Vector::Vector(const LogicalType &type) : type_(type) {
 	if (fixed_size > 0) {
 		data_ = std::make_unique<uint8_t[]>(fixed_size * STANDARD_VECTOR_SIZE);
 		std::memset(data_.get(), 0, fixed_size * STANDARD_VECTOR_SIZE);
-	} else {
+	} else if (type_.Id() == LogicalTypeId::VARCHAR) {
 		string_heap_.resize(STANDARD_VECTOR_SIZE);
+	} else if (type_.Id() == LogicalTypeId::VECTOR) {
+		vector_heap_.resize(STANDARD_VECTOR_SIZE);
 	}
 }
 
@@ -111,6 +113,9 @@ void Vector::Reset() {
 	for (auto &entry : string_heap_) {
 		entry.clear();
 	}
+	for (auto &entry : vector_heap_) {
+		entry.clear();
+	}
 }
 
 Value Vector::GetValue(idx_t index) const {
@@ -131,6 +136,8 @@ Value Vector::GetValue(idx_t index) const {
 		return Value::Double(reinterpret_cast<const double *>(data_.get())[index]);
 	case LogicalTypeId::VARCHAR:
 		return Value::Varchar(string_heap_[index]);
+	case LogicalTypeId::VECTOR:
+		return Value::Vector(vector_heap_[index]);
 	}
 	throw StorageException("Unknown logical type in Vector::GetValue");
 }
@@ -163,6 +170,9 @@ void Vector::SetValue(idx_t index, const Value &value) {
 		return;
 	case LogicalTypeId::VARCHAR:
 		string_heap_[index] = value.GetVarchar();
+		return;
+	case LogicalTypeId::VECTOR:
+		vector_heap_[index] = value.GetVector();
 		return;
 	}
 	throw StorageException("Unknown logical type in Vector::SetValue");

@@ -1,8 +1,8 @@
 # tiny-duckdb
 
-> 一个用于学习 OLAP 数据库内核的教学项目：参考 [BusTub](https://github.com/cmu-db/bustub)（CMU 15-445 的 OLTP 教学数据库）的课程设计，把 [DuckDB](https://github.com/duckdb/duckdb) 的核心架构提炼成 5 个循序渐进的 Lab。
+> 一个用于学习 OLAP 数据库内核的教学项目：参考 [BusTub](https://github.com/cmu-db/bustub)（CMU 15-445 的 OLTP 教学数据库）的课程设计，把 [DuckDB](https://github.com/duckdb/duckdb) 的核心架构提炼成 6 个循序渐进的 Lab。
 
-DuckDB 很强，但历经多个版本后代码量太大，直接读源码学习"一个经典 OLAP 数据库应该如何实现"非常困难。tiny-duckdb 从零开始、仅保留最核心的架构概念，用约 5000 行 C++17 实现一个**真的可以跑 SQL** 的分析型数据库：
+DuckDB 很强，但历经多个版本后代码量很大，直接读源码学习"一个经典 OLAP 数据库应该如何实现"非常困难。tiny-duckdb 从零开始、仅保留最核心的架构概念，用紧凑的 C++17 代码实现一个**真的可以跑 SQL** 的分析型数据库：
 
 ```
 $ ./tiny_duckdb_shell
@@ -40,6 +40,9 @@ tdb> SELECT l_returnflag, count(*), avg(l_quantity) FROM lineitem GROUP BY l_ret
      ┌─────▼─────┐   Lab 1   列存、行组、zone map
      │  Storage  │
      └───────────┘
+
+ Lab 5 横跨 Type → Binder → ExpressionExecutor：
+ 固定维 VECTOR(n) + 距离表达式 + exact Top-K 相似度检索
 ```
 
 ## Lab 列表
@@ -51,16 +54,19 @@ tdb> SELECT l_returnflag, count(*), avg(l_quantity) FROM lineitem GROUP BY l_ret
 | **Lab 2** | SQL 前端（8 个任务） | PEG 文法、packrat 解析、Transformer、Binder | [docs/lab2.md](docs/lab2.md) |
 | **Lab 3** | 执行引擎（6 个任务） | push-based 流水线、morsel-driven 并行、向量化执行、哈希聚合/连接 | [docs/lab3.md](docs/lab3.md) |
 | **Lab 4** | 探索性：lakebase（4 个任务） | 用真实 DuckDB 读写 Parquet 湖表、事务日志、时间旅行、compaction/vacuum | [docs/lab4.md](docs/lab4.md) |
+| **Lab 5** | Vector Expression（3 个任务） | 固定维 embedding、L2/余弦/负内积、exact Top-K 检索 | [docs/lab5.md](docs/lab5.md) |
 
 每份实验指导书按 BusTub 风格组织：Overview（任务与测试里程碑表）→ Background（必读背景）→ 逐任务规格与 Hint → Testing → Development Hints → Grading Rubric → 思考题。源码中的任务注释（strip 后保留给学生）与指导书一一对应。
 
 ## 快速开始
 
-```bash
-# 构建（首选；也提供 CMakeLists.txt）
-make -j$(nproc)
+Ubuntu 24.04 与 macOS 的完整依赖安装、Debug/ASan 配置和故障排查见 [docs/setup.md](docs/setup.md)。
 
-# 运行全部 89 个 C++ 测试（Lab 0-3）
+```bash
+# 构建（跨平台写法；也提供 CMakeLists.txt）
+make -j4
+
+# 运行全部 96 个 C++ 测试（Lab 0-3、Lab 5）
 make test                    # 等价于 ./tdbtest
 
 # 按套件名/前缀过滤（BusTub 式工作流：完成一个任务就跑它的一组测试）
@@ -74,9 +80,9 @@ make test                    # 等价于 ./tdbtest
 CMake 方式：
 
 ```bash
-mkdir build && cd build
-cmake .. && make -j$(nproc)
-./tdbtest
+cmake -S . -B cmake-build
+cmake --build cmake-build -j
+./cmake-build/tdbtest
 ```
 
 Lab 4 是 Python 实验（需要 `pip install duckdb pytest`）：
@@ -92,7 +98,7 @@ python3 demo.py
 本仓库是**参考解答版**（所有任务均已实现）。生成学生骨架版：
 
 ```bash
-./tools/strip_solutions.sh ../tiny-duckdb-student
+bash tools/strip_solutions.sh ../tiny-duckdb-student
 ```
 
 学生版中每个任务被替换为 `throw NotImplementedException(...)` 桩，代码可以直接编译，测试几乎全部失败（并明确报出 `task Lx.Ty not implemented yet`），学生按 Lab 顺序逐个解锁；源码中的任务注释与 `docs/labN.md` 指导书提供完整实现指引。
@@ -102,7 +108,7 @@ python3 demo.py
 ```
 src/
   include/tiny_duckdb/   头文件
-    common/              idx_t、Value、Vector、DataChunk（Lab 0/1 公共层）
+    common/              idx_t、Value、Vector、DataChunk、向量距离 kernel
     execution/           MorselQueue（Lab 0）、执行引擎（Lab 3）
     storage/             ColumnChunk、RowGroup、TableData、Catalog（Lab 1）
     parser/              PEG 引擎、SQL 文法、AST、Transformer（Lab 2）
@@ -110,7 +116,7 @@ src/
     planner/             逻辑计划（Lab 2）
     main/                TinyDuckDB、Connection、QueryResult
   */.cpp                 实现（含 [SOLUTION BEGIN Lx.Ty] 标记）
-test/                    Lab 0-3 测试（tdbtest 框架，gtest 风格）
+test/                    Lab 0-3、Lab 5 测试（tdbtest 框架，gtest 风格）
 lab4_lakebase/           Lab 4：Python + 真实 DuckDB 的湖表实验
 docs/                    每个 Lab 的讲义
 tools/strip_solutions.sh 生成学生版
@@ -121,6 +127,7 @@ third_party/tdbtest/     极简测试框架（避免外部依赖）
 
 - **行组大小** 8192 行（DuckDB 为 122880），让多行组行为在小数据量下也可观测；
 - **表达式执行** 走 `Value` 抽象而非按类型特化的原始数组循环，牺牲性能换取可读性（Lab 3 有专门练习讨论特化）;
+- **向量检索** 使用 `VECTOR(n)` DOUBLE 数组和 exact scan + sort；DuckDB 的 FLOAT ARRAY/HNSW 在 Lab 5 中作为原理对照与进阶方向；
 - **NULL 三值逻辑简化**：连接词中 NULL 视为 false，比较遇 NULL 得 NULL；
 - **功能集**：单表 + 单 INNER equi-join、5 种聚合、ORDER BY/LIMIT，不支持子查询/外连接/事务。
 

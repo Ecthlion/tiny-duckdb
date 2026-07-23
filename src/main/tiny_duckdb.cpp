@@ -69,7 +69,7 @@ std::string QueryResult::ToString() const {
 	}
 	for (const auto &row : rows) {
 		for (idx_t col = 0; col < row.size(); col++) {
-			widths[col] = std::max(widths[col], row[col].ToString().size());
+			widths[col] = std::max(widths[col], static_cast<idx_t>(row[col].ToString().size()));
 		}
 	}
 	std::ostringstream out;

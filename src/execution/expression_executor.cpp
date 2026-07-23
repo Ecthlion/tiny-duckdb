@@ -1,6 +1,7 @@
 #include "tiny_duckdb/execution/expression_executor.hpp"
 
 #include "tiny_duckdb/common/exception.hpp"
+#include "tiny_duckdb/common/vector_operations.hpp"
 
 namespace tiny_duckdb {
 
@@ -72,6 +73,38 @@ static bool EvaluateComparison(ExpressionType comparison, const Value &left, con
 	default:
 		throw ExecutorException("not a comparison");
 	}
+}
+
+//! LAB 5 - TASK #3: evaluate two VECTOR children once per DataChunk, then run
+//! the selected distance kernel row by row.
+static void EvaluateVectorDistance(const BoundVectorDistanceExpression &expr, DataChunk &chunk, Vector &result) {
+	// [SOLUTION BEGIN L5.T3]
+	Vector left(expr.left->return_type);
+	Vector right(expr.right->return_type);
+	ExpressionExecutor::Evaluate(*expr.left, chunk, left);
+	ExpressionExecutor::Evaluate(*expr.right, chunk, right);
+	for (idx_t i = 0; i < chunk.size(); i++) {
+		const Value left_value = left.GetValue(i);
+		const Value right_value = right.GetValue(i);
+		if (left_value.IsNull() || right_value.IsNull()) {
+			result.SetValue(i, Value::Null(LogicalType::Double()));
+			continue;
+		}
+		double distance = 0;
+		switch (expr.distance_type) {
+		case VectorDistanceType::L2:
+			distance = VectorOperations::L2Distance(left_value.GetVector(), right_value.GetVector());
+			break;
+		case VectorDistanceType::COSINE:
+			distance = VectorOperations::CosineDistance(left_value.GetVector(), right_value.GetVector());
+			break;
+		case VectorDistanceType::NEGATIVE_INNER_PRODUCT:
+			distance = VectorOperations::NegativeInnerProduct(left_value.GetVector(), right_value.GetVector());
+			break;
+		}
+		result.SetValue(i, Value::Double(distance));
+	}
+	// [SOLUTION END]
 }
 
 void ExpressionExecutor::Evaluate(const BoundExpression &expr, DataChunk &chunk, Vector &result) {
@@ -164,6 +197,9 @@ void ExpressionExecutor::Evaluate(const BoundExpression &expr, DataChunk &chunk,
 		}
 		return;
 	}
+	case ExpressionType::VECTOR_DISTANCE:
+		EvaluateVectorDistance(expr.Cast<BoundVectorDistanceExpression>(), chunk, result);
+		return;
 	default:
 		throw ExecutorException("ExpressionExecutor: unsupported expression type");
 	}
