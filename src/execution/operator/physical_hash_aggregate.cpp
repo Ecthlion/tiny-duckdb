@@ -83,89 +83,18 @@ struct AggregateState {
 	Value value; // min/max candidate
 
 	void Update(const Value &input) {
-		// [SOLUTION BEGIN L3.T4]
-		switch (aggregate) {
-		case ExpressionType::AGGREGATE_COUNT_STAR:
-			count++;
-			return;
-		case ExpressionType::AGGREGATE_COUNT:
-			if (!input.IsNull()) {
-				count++;
-			}
-			return;
-		case ExpressionType::AGGREGATE_SUM:
-		case ExpressionType::AGGREGATE_AVG:
-			if (!input.IsNull()) {
-				sum += input.GetNumeric();
-				count++;
-			}
-			return;
-		case ExpressionType::AGGREGATE_MIN:
-		case ExpressionType::AGGREGATE_MAX:
-			if (input.IsNull()) {
-				return;
-			}
-			if (!has_value) {
-				value = input;
-				has_value = true;
-				return;
-			}
-			if (aggregate == ExpressionType::AGGREGATE_MIN ? Value::LessThan(input, value)
-			                                               : Value::LessThan(value, input)) {
-				value = input;
-			}
-			return;
-		default:
-			throw ExecutorException("unknown aggregate");
-		}
-		// [SOLUTION END]
+		// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
+		throw NotImplementedException("task L3.T4 not implemented yet");
 	}
 
 	void Merge(const AggregateState &other) {
-		// [SOLUTION BEGIN L3.T4]
-		count += other.count;
-		sum += other.sum;
-		if (other.has_value) {
-			if (!has_value) {
-				value = other.value;
-				has_value = true;
-			} else if (aggregate == ExpressionType::AGGREGATE_MIN ? Value::LessThan(other.value, value)
-			                                                      : Value::LessThan(value, other.value)) {
-				value = other.value;
-			}
-		}
-		// [SOLUTION END]
+		// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
+		throw NotImplementedException("task L3.T4 not implemented yet");
 	}
 
 	Value Finalize(const LogicalType &return_type) const {
-		// [SOLUTION BEGIN L3.T4]
-		switch (aggregate) {
-		case ExpressionType::AGGREGATE_COUNT_STAR:
-		case ExpressionType::AGGREGATE_COUNT:
-			return Value::BigInt(count);
-		case ExpressionType::AGGREGATE_SUM:
-			if (count == 0) {
-				return Value::Null(return_type);
-			}
-			if (return_type.Id() == LogicalTypeId::DOUBLE) {
-				return Value::Double(sum);
-			}
-			return Value::BigInt(static_cast<int64_t>(sum));
-		case ExpressionType::AGGREGATE_AVG:
-			if (count == 0) {
-				return Value::Null(return_type);
-			}
-			return Value::Double(sum / static_cast<double>(count));
-		case ExpressionType::AGGREGATE_MIN:
-		case ExpressionType::AGGREGATE_MAX:
-			if (!has_value) {
-				return Value::Null(return_type);
-			}
-			return value;
-		default:
-			throw ExecutorException("unknown aggregate");
-		}
-		// [SOLUTION END]
+		// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
+		throw NotImplementedException("task L3.T4 not implemented yet");
 	}
 };
 
@@ -275,84 +204,23 @@ std::unique_ptr<LocalSinkState> PhysicalHashAggregate::GetLocalSinkState(Executi
 
 void PhysicalHashAggregate::Sink(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState &lstate,
                                  DataChunk &chunk) {
-	// [SOLUTION BEGIN L3.T4]
-	auto &local = lstate.Cast<HashAggregateLocalSinkState>();
-	std::vector<std::unique_ptr<Vector>> group_vectors;
-	for (const auto &group : groups) {
-		auto vector = std::make_unique<Vector>(group->return_type);
-		ExpressionExecutor::Evaluate(*group, chunk, *vector);
-		group_vectors.push_back(std::move(vector));
-	}
-	std::vector<std::unique_ptr<Vector>> arg_vectors;
-	for (const auto &agg : aggregates) {
-		if (!agg->child) {
-			arg_vectors.push_back(nullptr);
-			continue;
-		}
-		auto vector = std::make_unique<Vector>(agg->child->return_type);
-		ExpressionExecutor::Evaluate(*agg->child, chunk, *vector);
-		arg_vectors.push_back(std::move(vector));
-	}
-	for (idx_t row = 0; row < chunk.size(); row++) {
-		std::vector<Value> key;
-		for (const auto &vector : group_vectors) {
-			key.push_back(vector->GetValue(row));
-		}
-		auto &states = local.table.FindOrCreate(key);
-		for (idx_t agg_idx = 0; agg_idx < aggregates.size(); agg_idx++) {
-			Value input = arg_vectors[agg_idx] ? arg_vectors[agg_idx]->GetValue(row) : Value();
-			states[agg_idx].Update(input);
-		}
-	}
-	// [SOLUTION END]
+	// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T4 not implemented yet");
 }
 
 void PhysicalHashAggregate::Combine(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
-	// [SOLUTION BEGIN L3.T4]
-	auto &global = gstate.Cast<HashAggregateGlobalSinkState>();
-	auto &local = lstate.Cast<HashAggregateLocalSinkState>();
-	std::lock_guard<std::mutex> guard(global.lock);
-	for (idx_t group = 0; group < local.table.keys_.size(); group++) {
-		auto &states = global.table.FindOrCreate(local.table.keys_[group]);
-		for (idx_t agg_idx = 0; agg_idx < states.size(); agg_idx++) {
-			states[agg_idx].Merge(local.table.states_[group][agg_idx]);
-		}
-	}
-	// [SOLUTION END]
+	// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T4 not implemented yet");
 }
 
 void PhysicalHashAggregate::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
-	// [SOLUTION BEGIN L3.T4]
-	auto &global = gstate.Cast<HashAggregateGlobalSinkState>();
-	if (groups.empty() && global.table.Empty()) {
-		// aggregation without GROUP BY always produces exactly one row
-		global.table.FindOrCreate({});
-	}
-	for (idx_t group = 0; group < global.table.keys_.size(); group++) {
-		std::vector<Value> row = global.table.keys_[group];
-		for (idx_t agg_idx = 0; agg_idx < aggregates.size(); agg_idx++) {
-			row.push_back(global.table.states_[group][agg_idx].Finalize(aggregates[agg_idx]->return_type));
-		}
-		result_rows_.push_back(std::move(row));
-	}
-	// [SOLUTION END]
+	// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T4 not implemented yet");
 }
 
 void PhysicalHashAggregate::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput & /*input*/) {
-	// [SOLUTION BEGIN L3.T4]
-	idx_t offset = emit_offset_.fetch_add(STANDARD_VECTOR_SIZE);
-	if (offset >= result_rows_.size()) {
-		chunk.SetCardinality(0);
-		return;
-	}
-	idx_t count = std::min<idx_t>(STANDARD_VECTOR_SIZE, result_rows_.size() - offset);
-	for (idx_t row = 0; row < count; row++) {
-		for (idx_t col = 0; col < result_rows_[offset + row].size(); col++) {
-			chunk.SetValue(col, row, result_rows_[offset + row][col]);
-		}
-	}
-	chunk.SetCardinality(count);
-	// [SOLUTION END]
+	// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T4 not implemented yet");
 }
 
 } // namespace tiny_duckdb

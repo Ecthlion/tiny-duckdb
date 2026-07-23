@@ -73,19 +73,8 @@ void TableData::Append(DataChunk &chunk) {
 		}
 	}
 	std::lock_guard<std::mutex> guard(lock_);
-	// [SOLUTION BEGIN L1.T5]
-	idx_t offset = 0;
-	while (offset < chunk.size()) {
-		if (row_groups_.empty() || row_groups_.back()->CapacityLeft() == 0) {
-			row_groups_.push_back(std::make_unique<RowGroup>(column_types_));
-		}
-		RowGroup &current = *row_groups_.back();
-		const idx_t batch = std::min(current.CapacityLeft(), chunk.size() - offset);
-		current.Append(chunk, offset, batch);
-		offset += batch;
-		row_count_ += batch;
-	}
-	// [SOLUTION END]
+	// TODO(L1.T5): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L1.T5 not implemented yet");
 }
 
 void TableData::Scan(const TableScanMorsel &morsel, const std::vector<idx_t> &column_ids, DataChunk &out) const {

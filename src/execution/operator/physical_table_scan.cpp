@@ -64,26 +64,8 @@ std::unique_ptr<GlobalSourceState> PhysicalTableScan::GetGlobalSourceState(Execu
 }
 
 void PhysicalTableScan::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput &input) {
-	// [SOLUTION BEGIN L3.T3]
-	auto &gstate = input.global_state->Cast<TableScanGlobalSourceState>();
-	TableScanMorsel morsel;
-	while (gstate.scan_state->NextMorsel(morsel)) {
-		bool pruned = false;
-		for (const auto &filter : table_filters) {
-			if (!table.CheckZoneMap(morsel.row_group_index, filter.column_id, filter.constant,
-			                        filter.comparison)) {
-				pruned = true;
-				break;
-			}
-		}
-		if (pruned) {
-			continue;
-		}
-		table.Scan(morsel, column_ids, chunk);
-		return;
-	}
-	chunk.SetCardinality(0);
-	// [SOLUTION END]
+	// TODO(L3.T3): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T3 not implemented yet");
 }
 
 } // namespace tiny_duckdb

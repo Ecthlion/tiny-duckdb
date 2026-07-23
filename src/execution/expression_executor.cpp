@@ -78,147 +78,18 @@ static bool EvaluateComparison(ExpressionType comparison, const Value &left, con
 //! LAB 5 - TASK #3: evaluate two VECTOR children once per DataChunk, then run
 //! the selected distance kernel row by row.
 static void EvaluateVectorDistance(const BoundVectorDistanceExpression &expr, DataChunk &chunk, Vector &result) {
-	// [SOLUTION BEGIN L5.T3]
-	Vector left(expr.left->return_type);
-	Vector right(expr.right->return_type);
-	ExpressionExecutor::Evaluate(*expr.left, chunk, left);
-	ExpressionExecutor::Evaluate(*expr.right, chunk, right);
-	for (idx_t i = 0; i < chunk.size(); i++) {
-		const Value left_value = left.GetValue(i);
-		const Value right_value = right.GetValue(i);
-		if (left_value.IsNull() || right_value.IsNull()) {
-			result.SetValue(i, Value::Null(LogicalType::Double()));
-			continue;
-		}
-		double distance = 0;
-		switch (expr.distance_type) {
-		case VectorDistanceType::L2:
-			distance = VectorOperations::L2Distance(left_value.GetVector(), right_value.GetVector());
-			break;
-		case VectorDistanceType::COSINE:
-			distance = VectorOperations::CosineDistance(left_value.GetVector(), right_value.GetVector());
-			break;
-		case VectorDistanceType::NEGATIVE_INNER_PRODUCT:
-			distance = VectorOperations::NegativeInnerProduct(left_value.GetVector(), right_value.GetVector());
-			break;
-		}
-		result.SetValue(i, Value::Double(distance));
-	}
-	// [SOLUTION END]
+	// TODO(L5.T3): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L5.T3 not implemented yet");
 }
 
 void ExpressionExecutor::Evaluate(const BoundExpression &expr, DataChunk &chunk, Vector &result) {
-	// [SOLUTION BEGIN L3.T1]
-	switch (expr.type) {
-	case ExpressionType::COLUMN_REF: {
-		auto &col_expr = expr.Cast<BoundColumnRefExpression>();
-		auto &input = chunk.GetVector(col_expr.column_index);
-		for (idx_t i = 0; i < chunk.size(); i++) {
-			result.SetValue(i, input.GetValue(i));
-		}
-		return;
-	}
-	case ExpressionType::VALUE_CONSTANT: {
-		auto &const_expr = expr.Cast<BoundConstantExpression>();
-		for (idx_t i = 0; i < chunk.size(); i++) {
-			result.SetValue(i, const_expr.value);
-		}
-		return;
-	}
-	case ExpressionType::COMPARE_EQUAL:
-	case ExpressionType::COMPARE_NOT_EQUAL:
-	case ExpressionType::COMPARE_LESS_THAN:
-	case ExpressionType::COMPARE_LESS_THAN_OR_EQUAL:
-	case ExpressionType::COMPARE_GREATER_THAN:
-	case ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL: {
-		auto &cmp = expr.Cast<BoundComparisonExpression>();
-		Vector left(cmp.left->return_type);
-		Vector right(cmp.right->return_type);
-		Evaluate(*cmp.left, chunk, left);
-		Evaluate(*cmp.right, chunk, right);
-		for (idx_t i = 0; i < chunk.size(); i++) {
-			auto lval = left.GetValue(i);
-			auto rval = right.GetValue(i);
-			if (lval.IsNull() || rval.IsNull()) {
-				// comparison with NULL is NULL
-				result.SetValue(i, Value::Null(LogicalType::Boolean()));
-			} else {
-				result.SetValue(i, Value::Boolean(EvaluateComparison(expr.type, lval, rval)));
-			}
-		}
-		return;
-	}
-	case ExpressionType::CONJUNCTION_AND:
-	case ExpressionType::CONJUNCTION_OR: {
-		auto &conj = expr.Cast<BoundConjunctionExpression>();
-		Vector left(LogicalType::Boolean());
-		Vector right(LogicalType::Boolean());
-		Evaluate(*conj.left, chunk, left);
-		Evaluate(*conj.right, chunk, right);
-		for (idx_t i = 0; i < chunk.size(); i++) {
-			// simplified three-valued logic: NULL counts as false
-			auto lval = left.GetValue(i);
-			auto rval = right.GetValue(i);
-			bool lbool = !lval.IsNull() && lval.GetBoolean();
-			bool rbool = !rval.IsNull() && rval.GetBoolean();
-			bool out = expr.type == ExpressionType::CONJUNCTION_AND ? (lbool && rbool) : (lbool || rbool);
-			result.SetValue(i, Value::Boolean(out));
-		}
-		return;
-	}
-	case ExpressionType::OPERATOR_ADD:
-	case ExpressionType::OPERATOR_SUBTRACT:
-	case ExpressionType::OPERATOR_MULTIPLY:
-	case ExpressionType::OPERATOR_DIVIDE: {
-		auto &op = expr.Cast<BoundOperatorExpression>();
-		Vector left(op.left->return_type);
-		Vector right(op.right->return_type);
-		Evaluate(*op.left, chunk, left);
-		Evaluate(*op.right, chunk, right);
-		for (idx_t i = 0; i < chunk.size(); i++) {
-			auto lval = left.GetValue(i);
-			auto rval = right.GetValue(i);
-			Value out;
-			switch (expr.type) {
-			case ExpressionType::OPERATOR_ADD:
-				out = Value::Add(lval, rval);
-				break;
-			case ExpressionType::OPERATOR_SUBTRACT:
-				out = Value::Subtract(lval, rval);
-				break;
-			case ExpressionType::OPERATOR_MULTIPLY:
-				out = Value::Multiply(lval, rval);
-				break;
-			default:
-				out = Value::Divide(lval, rval);
-				break;
-			}
-			result.SetValue(i, out);
-		}
-		return;
-	}
-	case ExpressionType::VECTOR_DISTANCE:
-		EvaluateVectorDistance(expr.Cast<BoundVectorDistanceExpression>(), chunk, result);
-		return;
-	default:
-		throw ExecutorException("ExpressionExecutor: unsupported expression type");
-	}
-	// [SOLUTION END]
+	// TODO(L3.T1): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T1 not implemented yet");
 }
 
 idx_t ExpressionExecutor::Select(const BoundExpression &expr, DataChunk &chunk, SelectionVector &sel) {
-	// [SOLUTION BEGIN L3.T1]
-	Vector result(LogicalType::Boolean());
-	Evaluate(expr, chunk, result);
-	idx_t match_count = 0;
-	for (idx_t i = 0; i < chunk.size(); i++) {
-		auto value = result.GetValue(i);
-		if (!value.IsNull() && value.GetBoolean()) {
-			sel.set_index(match_count++, i);
-		}
-	}
-	return match_count;
-	// [SOLUTION END]
+	// TODO(L3.T1): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T1 not implemented yet");
 }
 
 } // namespace tiny_duckdb

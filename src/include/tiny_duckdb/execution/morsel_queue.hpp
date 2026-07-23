@@ -39,14 +39,8 @@ public:
 
 	//! Grab the next morsel. Returns false when all morsels are taken.
 	bool NextMorsel(idx_t &morsel_id) {
-		// [SOLUTION BEGIN L0.T1]
-		const idx_t morsel = next_.fetch_add(1, std::memory_order_relaxed);
-		if (morsel >= total_) {
-			return false;
-		}
-		morsel_id = morsel;
-		return true;
-		// [SOLUTION END]
+		// TODO(L0.T1): implement this (see the corresponding docs/labN.md)
+		throw NotImplementedException("task L0.T1 not implemented yet");
 	}
 
 	idx_t TotalMorsels() const {

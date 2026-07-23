@@ -59,15 +59,8 @@ std::unique_ptr<OperatorState> PhysicalFilter::GetOperatorState(ExecutionContext
 }
 
 OperatorResultType PhysicalFilter::Execute(ExecutionContext & /*context*/, DataChunk &chunk, OperatorState &state) {
-	// [SOLUTION BEGIN L3.T2]
-	auto &filter_state = state.Cast<FilterState>();
-	idx_t match_count = ExpressionExecutor::Select(*predicate, chunk, filter_state.sel);
-	if (match_count == chunk.size()) {
-		return OperatorResultType::NEED_MORE_INPUT;
-	}
-	chunk.Slice(filter_state.sel, match_count);
-	return OperatorResultType::NEED_MORE_INPUT;
-	// [SOLUTION END]
+	// TODO(L3.T2): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T2 not implemented yet");
 }
 
 class ProjectionState : public OperatorState {
@@ -90,17 +83,8 @@ std::unique_ptr<OperatorState> PhysicalProjection::GetOperatorState(ExecutionCon
 
 OperatorResultType PhysicalProjection::Execute(ExecutionContext & /*context*/, DataChunk &chunk,
                                                OperatorState &state) {
-	// [SOLUTION BEGIN L3.T2]
-	auto &proj_state = state.Cast<ProjectionState>();
-	for (idx_t col = 0; col < expressions.size(); col++) {
-		ExpressionExecutor::Evaluate(*expressions[col], chunk, proj_state.output.GetVector(col));
-	}
-	proj_state.output.SetCardinality(chunk.size());
-	chunk = std::move(proj_state.output);
-	// re-initialize the scratch chunk for the next input
-	proj_state.output.Initialize(types);
-	return OperatorResultType::NEED_MORE_INPUT;
-	// [SOLUTION END]
+	// TODO(L3.T2): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T2 not implemented yet");
 }
 
 } // namespace tiny_duckdb

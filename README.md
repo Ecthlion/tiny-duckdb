@@ -95,13 +95,18 @@ python3 demo.py
 
 ## 学生版 / 参考解答版
 
-本仓库是**参考解答版**（所有任务均已实现）。生成学生骨架版：
+本仓库维护两个分支：
+
+- `main`：学生版（默认）。每个任务位置保留 TODO，并用 `throw NotImplementedException(...)` / `raise NotImplementedError(...)` 做可编译桩。
+- `answer`：参考解答版（所有任务均已实现，能优雅通过全部测试）。
+
+如果需要从 `answer` 生成学生骨架版（导出到另一个目录）：
 
 ```bash
 bash tools/strip_solutions.sh ../tiny-duckdb-student
 ```
 
-学生版中每个任务被替换为 `throw NotImplementedException(...)` 桩，代码可以直接编译，测试几乎全部失败（并明确报出 `task Lx.Ty not implemented yet`），学生按 Lab 顺序逐个解锁；源码中的任务注释与 `docs/labN.md` 指导书提供完整实现指引。
+学生版代码可以直接编译，测试几乎全部失败（并明确报出 `task Lx.Ty not implemented yet`），学生按 Lab 顺序逐个解锁；源码中的任务注释与 `docs/labN.md` 指导书提供完整实现指引。
 
 ## 目录结构
 
@@ -115,7 +120,7 @@ src/
     binder/              BoundExpression、Binder（Lab 2）
     planner/             逻辑计划（Lab 2）
     main/                TinyDuckDB、Connection、QueryResult
-  */.cpp                 实现（含 [SOLUTION BEGIN Lx.Ty] 标记）
+  */.cpp                 实现（main 为 TODO 桩；answer 分支含 [SOLUTION BEGIN Lx.Ty] 标记）
 test/                    Lab 0-3、Lab 5 测试（tdbtest 框架，gtest 风格）
 lab4_lakebase/           Lab 4：Python + 真实 DuckDB 的湖表实验
 docs/                    每个 Lab 的讲义

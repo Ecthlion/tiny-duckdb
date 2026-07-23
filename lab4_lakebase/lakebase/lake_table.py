@@ -39,31 +39,14 @@ class LakeTable:
         """Create an empty lake table. schema: {"col": "INTEGER", ...}."""
         os.makedirs(os.path.join(path, LOG_DIR), exist_ok=True)
         table = LakeTable(path)
-        # [SOLUTION BEGIN L4.T1]
-        columns = ", ".join("{} {}".format(name, sql_type) for name, sql_type in schema.items())
-        # commit 0 records the schema and zero data files
-        table._commit([{"schema": {"columns": schema, "ddl": columns}}])
-        # [SOLUTION END]
+        # TODO(L4.T1): implement this (see the lab handout)
+        raise NotImplementedError("task L4.T1 not implemented yet")
         return table
 
     def append(self, rows):
         """Append a list of tuples as ONE new Parquet file (+ one commit)."""
-        # [SOLUTION BEGIN L4.T1]
-        schema = self.schema()
-        columns = ", ".join(schema.keys())
-        filename = "part-{:05d}-{}.parquet".format(self.version() + 1, uuid.uuid4().hex[:8])
-        file_path = os.path.join(self.path, filename)
-        con = duckdb.connect()
-        placeholders = ", ".join(["?"] * len(schema))
-        con.execute("CREATE TABLE batch ({})".format(
-            ", ".join("{} {}".format(name, sql_type) for name, sql_type in schema.items())))
-        con.executemany("INSERT INTO batch VALUES ({})".format(placeholders), rows)
-        # DuckDB writes the Parquet file for us
-        con.execute("COPY batch TO '{}' (FORMAT PARQUET)".format(file_path))
-        con.close()
-        self._commit([{"add": {"path": filename, "num_rows": len(rows)}}])
-        return filename
-        # [SOLUTION END]
+        # TODO(L4.T1): implement this (see the lab handout)
+        raise NotImplementedError("task L4.T1 not implemented yet")
 
     # ------------------------------------------------------------------
     # L4.T2: snapshot read with projection/filter pushdown
@@ -74,21 +57,8 @@ class LakeTable:
         columns: projected column names (None = all)
         where:   a SQL predicate string pushed down into the Parquet scan
         """
-        # [SOLUTION BEGIN L4.T2]
-        files = [os.path.join(self.path, f) for f in self._snapshot_files()]
-        if not files:
-            return []
-        con = duckdb.connect()
-        projection = "*" if columns is None else ", ".join(columns)
-        query = "SELECT {} FROM read_parquet(?)".format(projection)
-        if where is not None:
-            # DuckDB pushes this predicate into the Parquet reader (row-group
-            # skipping via min/max statistics - the same trick as our Lab 1!)
-            query += " WHERE " + where
-        result = con.execute(query, [files]).fetchall()
-        con.close()
-        return result
-        # [SOLUTION END]
+        # TODO(L4.T2): implement this (see the lab handout)
+        raise NotImplementedError("task L4.T2 not implemented yet")
 
     def explain_scan(self, where=None):
         """Show the pushed-down filter in DuckDB's plan (for the README demo)."""
@@ -108,54 +78,21 @@ class LakeTable:
     # ------------------------------------------------------------------
     def history(self):
         """One entry per commit: (version, actions)."""
-        # [SOLUTION BEGIN L4.T3]
-        result = []
-        for version in range(self.version() + 1):
-            result.append((version, self._read_log(version)["actions"]))
-        return result
-        # [SOLUTION END]
+        # TODO(L4.T3): implement this (see the lab handout)
+        raise NotImplementedError("task L4.T3 not implemented yet")
 
     def scan_version(self, version, columns=None, where=None):
         """Time travel: read the snapshot as of an older commit."""
-        # [SOLUTION BEGIN L4.T3]
-        files = [os.path.join(self.path, f) for f in self._snapshot_files(at_version=version)]
-        if not files:
-            return []
-        con = duckdb.connect()
-        projection = "*" if columns is None else ", ".join(columns)
-        query = "SELECT {} FROM read_parquet(?)".format(projection)
-        if where is not None:
-            query += " WHERE " + where
-        result = con.execute(query, [files]).fetchall()
-        con.close()
-        return result
-        # [SOLUTION END]
+        # TODO(L4.T3): implement this (see the lab handout)
+        raise NotImplementedError("task L4.T3 not implemented yet")
 
     # ------------------------------------------------------------------
     # L4.T4: compaction (OPTIMIZE): many small files -> one big file
     # ------------------------------------------------------------------
     def compact(self):
         """Rewrite all live Parquet files into a single file."""
-        # [SOLUTION BEGIN L4.T4]
-        live = self._snapshot_files()
-        if len(live) <= 1:
-            return None
-        filename = "part-compacted-{}.parquet".format(uuid.uuid4().hex[:8])
-        file_path = os.path.join(self.path, filename)
-        files = [os.path.join(self.path, f) for f in live]
-        con = duckdb.connect()
-        con.execute("COPY (SELECT * FROM read_parquet(?)) TO '{}' (FORMAT PARQUET)".format(file_path),
-                    [files])
-        num_rows = con.execute("SELECT count(*) FROM read_parquet(?)", [files]).fetchone()[0]
-        con.close()
-        actions = [{"remove": {"path": f}} for f in live]
-        actions.append({"add": {"path": filename, "num_rows": num_rows}})
-        self._commit(actions)
-        # The old files are now LOGICALLY removed from the latest snapshot,
-        # but stay on disk so time travel keeps working - exactly like Delta
-        # Lake, where OPTIMIZE never deletes data (VACUUM does).
-        return filename
-        # [SOLUTION END]
+        # TODO(L4.T4): implement this (see the lab handout)
+        raise NotImplementedError("task L4.T4 not implemented yet")
 
     def vacuum(self):
         """Physically delete Parquet files no longer in the current snapshot.

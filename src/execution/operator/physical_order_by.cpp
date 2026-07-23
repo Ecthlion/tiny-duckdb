@@ -125,26 +125,8 @@ void PhysicalOrderBy::Combine(ExecutionContext & /*context*/, GlobalSinkState &g
 }
 
 void PhysicalOrderBy::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
-	// [SOLUTION BEGIN L3.T6]
-	auto &global = gstate.Cast<MaterializeGlobalSinkState>();
-	result_rows_ = std::move(global.rows);
-	// stable multi-key sort; NULLs sort first (Value::LessThan)
-	std::stable_sort(result_rows_.begin(), result_rows_.end(), [this](const std::vector<Value> &left,
-	                                                                  const std::vector<Value> &right) {
-		for (const auto &key : keys) {
-			const auto &lval = left[key.first];
-			const auto &rval = right[key.first];
-			if (Value::Equals(lval, rval)) {
-				continue;
-			}
-			if (key.second) {
-				return Value::LessThan(lval, rval);
-			}
-			return Value::LessThan(rval, lval);
-		}
-		return false;
-	});
-	// [SOLUTION END]
+	// TODO(L3.T6): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T6 not implemented yet");
 }
 
 void PhysicalOrderBy::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput & /*input*/) {
@@ -171,25 +153,8 @@ std::unique_ptr<LocalSinkState> PhysicalLimit::GetLocalSinkState(ExecutionContex
 
 void PhysicalLimit::Sink(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState & /*lstate*/,
                          DataChunk &chunk) {
-	// [SOLUTION BEGIN L3.T6]
-	// limit is not order-sensitive: truncate globally under the lock
-	auto &global = gstate.Cast<MaterializeGlobalSinkState>();
-	std::lock_guard<std::mutex> guard(global.lock);
-	idx_t remaining = global.rows.size() >= static_cast<idx_t>(limit)
-	                      ? 0
-	                      : static_cast<idx_t>(limit) - global.rows.size();
-	if (remaining == 0) {
-		return;
-	}
-	idx_t count = std::min<idx_t>(chunk.size(), remaining);
-	for (idx_t row = 0; row < count; row++) {
-		std::vector<Value> values;
-		for (idx_t col = 0; col < chunk.ColumnCount(); col++) {
-			values.push_back(chunk.GetValue(col, row));
-		}
-		global.rows.push_back(std::move(values));
-	}
-	// [SOLUTION END]
+	// TODO(L3.T6): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L3.T6 not implemented yet");
 }
 
 void PhysicalLimit::Combine(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState & /*lstate*/) {

@@ -22,12 +22,8 @@ void RowGroup::Append(DataChunk &chunk, idx_t source_offset, idx_t count) {
 	if (count > CapacityLeft()) {
 		throw StorageException("RowGroup::Append exceeds row group capacity");
 	}
-	// [SOLUTION BEGIN L1.T4]
-	for (idx_t col = 0; col < columns_.size(); col++) {
-		columns_[col]->Append(chunk.GetVector(col), source_offset, count);
-	}
-	count_ += count;
-	// [SOLUTION END]
+	// TODO(L1.T4): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L1.T4 not implemented yet");
 }
 
 void RowGroup::Append(DataChunk &chunk) {
@@ -38,12 +34,8 @@ void RowGroup::Scan(idx_t offset, idx_t count, const std::vector<idx_t> &column_
 	if (offset + count > count_) {
 		throw StorageException("RowGroup::Scan out of range");
 	}
-	// [SOLUTION BEGIN L1.T4]
-	for (idx_t i = 0; i < column_ids.size(); i++) {
-		columns_[column_ids[i]]->Scan(offset, count, out.GetVector(i), 0);
-	}
-	out.SetCardinality(count);
-	// [SOLUTION END]
+	// TODO(L1.T4): implement this (see the corresponding docs/labN.md)
+	throw NotImplementedException("task L1.T4 not implemented yet");
 }
 
 bool RowGroup::CheckZoneMap(idx_t column_id, const Value &constant, ExpressionType comparison) const {
