@@ -14,24 +14,23 @@ namespace tiny_duckdb {
 //! they are safe to call directly from tests or future operators.
 //! ============================================================================
 
-void VectorOperations::ValidateDimensions(const std::vector<double> &left, const std::vector<double> &right) {
+void VectorOperations::ValidateDimensions(const std::vector<double>& left, const std::vector<double>& right) {
 	if (left.empty() || left.size() != right.size()) {
 		throw ExecutorException("vector distance requires two non-empty vectors with the same dimension");
 	}
 }
 
-double VectorOperations::L2Distance(const std::vector<double> &left, const std::vector<double> &right) {
+double VectorOperations::L2Distance(const std::vector<double>& left, const std::vector<double>& right) {
 	// TODO(L5.T1): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L5.T1 not implemented yet");
 }
 
-double VectorOperations::CosineDistance(const std::vector<double> &left, const std::vector<double> &right) {
+double VectorOperations::CosineDistance(const std::vector<double>& left, const std::vector<double>& right) {
 	// TODO(L5.T1): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L5.T1 not implemented yet");
 }
 
-double VectorOperations::NegativeInnerProduct(const std::vector<double> &left,
-                                              const std::vector<double> &right) {
+double VectorOperations::NegativeInnerProduct(const std::vector<double>& left, const std::vector<double>& right) {
 	// TODO(L5.T1): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L5.T1 not implemented yet");
 }

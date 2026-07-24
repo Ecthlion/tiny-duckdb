@@ -21,8 +21,8 @@ Vector MakeIntVector(idx_t start, idx_t count) {
 }
 
 std::unique_ptr<TableData> MakeTable(idx_t rows) {
-	auto table = std::make_unique<TableData>("t", std::vector<std::string> {"a", "b"},
-	                                    std::vector<LogicalType> {LogicalType::Integer(), LogicalType::Varchar()});
+	auto table = std::make_unique<TableData>("t", std::vector<std::string>{"a", "b"},
+											 std::vector<LogicalType>{LogicalType::Integer(), LogicalType::Varchar()});
 	DataChunk chunk;
 	chunk.Initialize({LogicalType::Integer(), LogicalType::Varchar()});
 	for (idx_t i = 0; i < rows; i++) {
@@ -186,7 +186,7 @@ TEST(Lab1StorageTest, TableScanMorselsCoverAllRows) {
 	}
 	// morsels are STANDARD_VECTOR_SIZE slices of row groups
 	idx_t covered = 0;
-	for (const auto &m : morsels) {
+	for (const auto& m : morsels) {
 		EXPECT_TRUE(m.count > 0);
 		EXPECT_TRUE(m.count <= STANDARD_VECTOR_SIZE);
 		covered += m.count;
@@ -196,7 +196,7 @@ TEST(Lab1StorageTest, TableScanMorselsCoverAllRows) {
 
 TEST(Lab1StorageTest, TableScanRoundTrip) {
 	auto table = MakeTable(100);
-	TableScanMorsel morsel {0, 10, 20};
+	TableScanMorsel morsel{0, 10, 20};
 	DataChunk out;
 	out.Initialize({LogicalType::Integer(), LogicalType::Varchar()});
 	table->Scan(morsel, {0, 1}, out);

@@ -45,25 +45,25 @@ namespace tiny_duckdb {
 
 //! Shared between all scan threads: hands out morsels
 class TableScanGlobalSourceState : public GlobalSourceState {
-public:
+  public:
 	std::unique_ptr<ParallelTableScanState> scan_state;
 };
 
-PhysicalTableScan::PhysicalTableScan(TableData &table_p, std::vector<idx_t> column_ids_p,
-                                     std::vector<LogicalType> types_p, std::vector<std::string> names_p,
-                                     std::vector<TableFilter> table_filters_p)
-    : PhysicalOperator(PhysicalOperatorType::TABLE_SCAN, std::move(types_p)), table(table_p),
-      column_ids(std::move(column_ids_p)), table_filters(std::move(table_filters_p)) {
+PhysicalTableScan::PhysicalTableScan(TableData& table_p, std::vector<idx_t> column_ids_p,
+									 std::vector<LogicalType> types_p, std::vector<std::string> names_p,
+									 std::vector<TableFilter> table_filters_p)
+	: PhysicalOperator(PhysicalOperatorType::TABLE_SCAN, std::move(types_p)), table(table_p),
+	  column_ids(std::move(column_ids_p)), table_filters(std::move(table_filters_p)) {
 	names = std::move(names_p);
 }
 
-std::unique_ptr<GlobalSourceState> PhysicalTableScan::GetGlobalSourceState(ExecutionContext & /*context*/) {
+std::unique_ptr<GlobalSourceState> PhysicalTableScan::GetGlobalSourceState(ExecutionContext& /*context*/) {
 	auto result = std::make_unique<TableScanGlobalSourceState>();
 	result->scan_state = table.CreateParallelScanState();
 	return result;
 }
 
-void PhysicalTableScan::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput &input) {
+void PhysicalTableScan::GetData(ExecutionContext& /*context*/, DataChunk& chunk, SourceInput& input) {
 	// TODO(L3.T3): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T3 not implemented yet");
 }

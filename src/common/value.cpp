@@ -7,16 +7,12 @@
 
 namespace tiny_duckdb {
 
-Value::Value() : Value(LogicalType::Integer()) {
-}
+Value::Value() : Value(LogicalType::Integer()) {}
 
-Value::Value(const LogicalType &type)
-    : type_(type), is_null_(true), bool_value_(false), int_value_(0), bigint_value_(0), double_value_(0) {
-}
+Value::Value(const LogicalType& type)
+	: type_(type), is_null_(true), bool_value_(false), int_value_(0), bigint_value_(0), double_value_(0) {}
 
-Value Value::Null(const LogicalType &type) {
-	return Value(type);
-}
+Value Value::Null(const LogicalType& type) { return Value(type); }
 
 Value Value::Boolean(bool val) {
 	Value result(LogicalType::Boolean());
@@ -46,7 +42,7 @@ Value Value::Double(double val) {
 	return result;
 }
 
-Value Value::Varchar(const std::string &val) {
+Value Value::Varchar(const std::string& val) {
 	Value result(LogicalType::Varchar());
 	result.is_null_ = false;
 	result.string_value_ = val;
@@ -63,13 +59,9 @@ Value Value::Vector(std::vector<double> val) {
 	return result;
 }
 
-bool Value::IsNull() const {
-	return is_null_;
-}
+bool Value::IsNull() const { return is_null_; }
 
-const LogicalType &Value::GetType() const {
-	return type_;
-}
+const LogicalType& Value::GetType() const { return type_; }
 
 bool Value::GetBoolean() const {
 	if (type_.Id() != LogicalTypeId::BOOLEAN) {
@@ -99,14 +91,14 @@ double Value::GetDouble() const {
 	return double_value_;
 }
 
-const std::string &Value::GetVarchar() const {
+const std::string& Value::GetVarchar() const {
 	if (type_.Id() != LogicalTypeId::VARCHAR) {
 		throw ExecutorException("GetVarchar on non-varchar value");
 	}
 	return string_value_;
 }
 
-const std::vector<double> &Value::GetVector() const {
+const std::vector<double>& Value::GetVector() const {
 	if (type_.Id() != LogicalTypeId::VECTOR) {
 		throw ExecutorException("GetVector on non-vector value");
 	}
@@ -176,7 +168,7 @@ std::string Value::ToString() const {
 	return "?";
 }
 
-bool Value::Equals(const Value &left, const Value &right) {
+bool Value::Equals(const Value& left, const Value& right) {
 	if (left.is_null_ || right.is_null_) {
 		return left.is_null_ && right.is_null_;
 	}
@@ -195,7 +187,7 @@ bool Value::Equals(const Value &left, const Value &right) {
 	return left.string_value_ == right.string_value_;
 }
 
-bool Value::LessThan(const Value &left, const Value &right) {
+bool Value::LessThan(const Value& left, const Value& right) {
 	if (left.is_null_ || right.is_null_) {
 		return left.is_null_ && !right.is_null_;
 	}
@@ -219,22 +211,22 @@ uint64_t Value::Hash() const {
 		return 0x9e3779b97f4a7c15ULL;
 	}
 	if (type_.IsNumeric()) {
-		return std::hash<double> {}(GetNumeric());
+		return std::hash<double>{}(GetNumeric());
 	}
 	if (type_.Id() == LogicalTypeId::BOOLEAN) {
-		return std::hash<bool> {}(bool_value_);
+		return std::hash<bool>{}(bool_value_);
 	}
 	if (type_.Id() == LogicalTypeId::VECTOR) {
 		uint64_t hash = 0xcbf29ce484222325ULL;
 		for (const double element : vector_value_) {
-			hash ^= std::hash<double> {}(element) + 0x9e3779b97f4a7c15ULL + (hash << 6U) + (hash >> 2U);
+			hash ^= std::hash<double>{}(element) + 0x9e3779b97f4a7c15ULL + (hash << 6U) + (hash >> 2U);
 		}
 		return hash;
 	}
-	return std::hash<std::string> {}(string_value_);
+	return std::hash<std::string>{}(string_value_);
 }
 
-LogicalType Value::MaxNumericType(const LogicalType &left, const LogicalType &right) {
+LogicalType Value::MaxNumericType(const LogicalType& left, const LogicalType& right) {
 	if (left.Id() == LogicalTypeId::DOUBLE || right.Id() == LogicalTypeId::DOUBLE) {
 		return LogicalType::Double();
 	}
@@ -245,8 +237,8 @@ LogicalType Value::MaxNumericType(const LogicalType &left, const LogicalType &ri
 }
 
 template <class INT_OP, class DOUBLE_OP>
-static Value NumericBinaryOp(const Value &left, const Value &right, INT_OP int_op, DOUBLE_OP double_op,
-                             bool force_double) {
+static Value NumericBinaryOp(const Value& left, const Value& right, INT_OP int_op, DOUBLE_OP double_op,
+							 bool force_double) {
 	if (left.IsNull() || right.IsNull()) {
 		return Value::Null(Value::MaxNumericType(left.GetType(), right.GetType()));
 	}
@@ -264,38 +256,34 @@ static Value NumericBinaryOp(const Value &left, const Value &right, INT_OP int_o
 	return Value::Integer(static_cast<int32_t>(result));
 }
 
-Value Value::Add(const Value &left, const Value &right) {
+Value Value::Add(const Value& left, const Value& right) {
 	return NumericBinaryOp(
-	    left, right, [](int64_t a, int64_t b) { return a + b; }, [](double a, double b) { return a + b; }, false);
+		left, right, [](int64_t a, int64_t b) { return a + b; }, [](double a, double b) { return a + b; }, false);
 }
 
-Value Value::Subtract(const Value &left, const Value &right) {
+Value Value::Subtract(const Value& left, const Value& right) {
 	return NumericBinaryOp(
-	    left, right, [](int64_t a, int64_t b) { return a - b; }, [](double a, double b) { return a - b; }, false);
+		left, right, [](int64_t a, int64_t b) { return a - b; }, [](double a, double b) { return a - b; }, false);
 }
 
-Value Value::Multiply(const Value &left, const Value &right) {
+Value Value::Multiply(const Value& left, const Value& right) {
 	return NumericBinaryOp(
-	    left, right, [](int64_t a, int64_t b) { return a * b; }, [](double a, double b) { return a * b; }, false);
+		left, right, [](int64_t a, int64_t b) { return a * b; }, [](double a, double b) { return a * b; }, false);
 }
 
-Value Value::Divide(const Value &left, const Value &right) {
+Value Value::Divide(const Value& left, const Value& right) {
 	return NumericBinaryOp(
-	    left, right, [](int64_t a, int64_t b) { return b == 0 ? 0 : a / b; },
-	    [](double a, double b) { return b == 0 ? std::nan("") : a / b; }, true);
+		left, right, [](int64_t a, int64_t b) { return b == 0 ? 0 : a / b; },
+		[](double a, double b) { return b == 0 ? std::nan("") : a / b; }, true);
 }
 
-std::ostream &operator<<(std::ostream &os, const Value &value) {
+std::ostream& operator<<(std::ostream& os, const Value& value) {
 	os << value.ToString();
 	return os;
 }
 
-bool operator==(const Value &left, const Value &right) {
-	return Value::Equals(left, right);
-}
+bool operator==(const Value& left, const Value& right) { return Value::Equals(left, right); }
 
-bool operator!=(const Value &left, const Value &right) {
-	return !Value::Equals(left, right);
-}
+bool operator!=(const Value& left, const Value& right) { return !Value::Equals(left, right); }
 
 } // namespace tiny_duckdb

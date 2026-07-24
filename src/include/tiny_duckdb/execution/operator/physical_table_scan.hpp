@@ -28,14 +28,14 @@ struct TableFilter {
 //! clause (see PhysicalPlanGenerator).
 //! ============================================================================
 class PhysicalTableScan : public PhysicalOperator {
-public:
-	PhysicalTableScan(TableData &table, std::vector<idx_t> column_ids, std::vector<LogicalType> types,
-	                  std::vector<std::string> names, std::vector<TableFilter> table_filters);
+  public:
+	PhysicalTableScan(TableData& table, std::vector<idx_t> column_ids, std::vector<LogicalType> types,
+					  std::vector<std::string> names, std::vector<TableFilter> table_filters);
 
-	std::unique_ptr<GlobalSourceState> GetGlobalSourceState(ExecutionContext &context) override;
-	void GetData(ExecutionContext &context, DataChunk &chunk, SourceInput &input) override;
+	std::unique_ptr<GlobalSourceState> GetGlobalSourceState(ExecutionContext& context) override;
+	void GetData(ExecutionContext& context, DataChunk& chunk, SourceInput& input) override;
 
-	TableData &table;
+	TableData& table;
 	std::vector<idx_t> column_ids;
 	std::vector<TableFilter> table_filters;
 };

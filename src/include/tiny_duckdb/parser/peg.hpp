@@ -37,9 +37,9 @@ struct Ast {
 	idx_t end = 0;
 
 	//! First direct child with the given rule name, or nullptr
-	const Ast *Find(const std::string &child_name) const;
+	const Ast* Find(const std::string& child_name) const;
 	//! All direct children with the given rule name
-	std::vector<const Ast *> FindAll(const std::string &child_name) const;
+	std::vector<const Ast*> FindAll(const std::string& child_name) const;
 	//! Deep copy
 	std::unique_ptr<Ast> Clone() const;
 	//! Debug tree dump
@@ -47,14 +47,14 @@ struct Ast {
 };
 
 class Parser {
-public:
+  public:
 	//! Compile a grammar; the first rule is the start rule. Throws ParserException.
-	explicit Parser(const std::string &grammar);
+	explicit Parser(const std::string& grammar);
 
 	//! Parse the whole input. Throws ParserException with line/column on failure.
-	std::unique_ptr<Ast> Parse(const std::string &input) const;
+	std::unique_ptr<Ast> Parse(const std::string& input) const;
 
-private:
+  private:
 	struct Expression {
 		enum class Kind : uint8_t {
 			LITERAL,
@@ -88,28 +88,27 @@ private:
 	};
 
 	struct MatchContext {
-		const std::string *input = nullptr;
+		const std::string* input = nullptr;
 		std::unordered_map<idx_t, MemoEntry> memo;
 		idx_t farthest_failure = 0;
 	};
 
 	// grammar parsing
-	std::vector<std::unique_ptr<Rule>> ParseGrammar(const std::string &grammar) const;
-	std::unique_ptr<Expression> ParseChoice(const std::string &text, idx_t &pos) const;
-	std::unique_ptr<Expression> ParseSequence(const std::string &text, idx_t &pos) const;
-	std::unique_ptr<Expression> ParsePrefix(const std::string &text, idx_t &pos) const;
-	std::unique_ptr<Expression> ParseSuffix(const std::string &text, idx_t &pos) const;
-	std::unique_ptr<Expression> ParseTerm(const std::string &text, idx_t &pos) const;
+	std::vector<std::unique_ptr<Rule>> ParseGrammar(const std::string& grammar) const;
+	std::unique_ptr<Expression> ParseChoice(const std::string& text, idx_t& pos) const;
+	std::unique_ptr<Expression> ParseSequence(const std::string& text, idx_t& pos) const;
+	std::unique_ptr<Expression> ParsePrefix(const std::string& text, idx_t& pos) const;
+	std::unique_ptr<Expression> ParseSuffix(const std::string& text, idx_t& pos) const;
+	std::unique_ptr<Expression> ParseTerm(const std::string& text, idx_t& pos) const;
 
 	// matching
-	bool Match(const Expression &expression, MatchContext &context, idx_t &pos,
-	           std::vector<std::unique_ptr<Ast>> &nodes) const;
-	bool MatchRule(idx_t rule_index, MatchContext &context, idx_t &pos,
-	               std::vector<std::unique_ptr<Ast>> &nodes) const;
-	bool MatchCharClass(const std::string &spec, char c) const;
-	static bool StartsWithCharClass(const Expression &expression);
+	bool Match(const Expression& expression, MatchContext& context, idx_t& pos,
+			   std::vector<std::unique_ptr<Ast>>& nodes) const;
+	bool MatchRule(idx_t rule_index, MatchContext& context, idx_t& pos, std::vector<std::unique_ptr<Ast>>& nodes) const;
+	bool MatchCharClass(const std::string& spec, char c) const;
+	static bool StartsWithCharClass(const Expression& expression);
 
-	static void SkipWhitespace(const std::string &input, idx_t &pos);
+	static void SkipWhitespace(const std::string& input, idx_t& pos);
 	static bool IsIdentifierChar(char c);
 
 	std::vector<std::unique_ptr<Rule>> rules_;

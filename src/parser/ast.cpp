@@ -2,9 +2,7 @@
 
 namespace tiny_duckdb {
 
-std::string ConstantExpression::ToString() const {
-	return value.ToString();
-}
+std::string ConstantExpression::ToString() const { return value.ToString(); }
 
 std::string ColumnRefExpression::ToString() const {
 	if (IsQualified()) {
@@ -80,8 +78,6 @@ std::string FunctionExpression::ToString() const {
 	return result + ")";
 }
 
-std::string StarExpression::ToString() const {
-	return "*";
-}
+std::string StarExpression::ToString() const { return "*"; }
 
 } // namespace tiny_duckdb

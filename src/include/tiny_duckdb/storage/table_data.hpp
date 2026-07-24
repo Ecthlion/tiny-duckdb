@@ -24,16 +24,16 @@ struct TableScanMorsel {
 //! NextMorsel() until the table is exhausted. (Provided for Lab 3; Lab 0's
 //! MorselQueue is the primitive this builds on.)
 class ParallelTableScanState {
-public:
+  public:
 	//! Build the morsel list for the given row group counts
-	void Initialize(const std::vector<idx_t> &row_group_counts);
+	void Initialize(const std::vector<idx_t>& row_group_counts);
 
 	//! Thread-safe morsel dispenser. Returns false when the scan is done.
-	bool NextMorsel(TableScanMorsel &morsel);
+	bool NextMorsel(TableScanMorsel& morsel);
 
-private:
+  private:
 	std::vector<TableScanMorsel> morsels_;
-	std::atomic<idx_t> next_ {0};
+	std::atomic<idx_t> next_{0};
 };
 
 //! ============================================================================
@@ -58,30 +58,29 @@ private:
 //!        TableScanMorselsCoverAllRows (and every Lab 3 test inserts data)
 //! ============================================================================
 class TableData {
-public:
+  public:
 	TableData(std::string name, std::vector<std::string> column_names, std::vector<LogicalType> column_types);
 
-	const std::string &GetName() const;
-	const std::vector<std::string> &GetColumnNames() const;
-	const std::vector<LogicalType> &GetColumnTypes() const;
+	const std::string& GetName() const;
+	const std::vector<std::string>& GetColumnNames() const;
+	const std::vector<LogicalType>& GetColumnTypes() const;
 	idx_t ColumnCount() const;
 	idx_t RowCount() const;
 	idx_t RowGroupCount() const;
 
 	//! Append an entire DataChunk (thread-safe)
-	void Append(DataChunk &chunk);
+	void Append(DataChunk& chunk);
 
 	//! Read a morsel of data. column_ids refers to table column indexes.
-	void Scan(const TableScanMorsel &morsel, const std::vector<idx_t> &column_ids, DataChunk &out) const;
+	void Scan(const TableScanMorsel& morsel, const std::vector<idx_t>& column_ids, DataChunk& out) const;
 
 	//! Zone map check on a row group (used by the scan to skip morsels)
-	bool CheckZoneMap(idx_t row_group_index, idx_t column_id, const Value &constant,
-	                  ExpressionType comparison) const;
+	bool CheckZoneMap(idx_t row_group_index, idx_t column_id, const Value& constant, ExpressionType comparison) const;
 
 	//! Fill a ParallelTableScanState with the current morsel layout
 	std::unique_ptr<ParallelTableScanState> CreateParallelScanState() const;
 
-private:
+  private:
 	std::string name_;
 	std::vector<std::string> column_names_;
 	std::vector<LogicalType> column_types_;

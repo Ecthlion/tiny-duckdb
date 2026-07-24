@@ -11,15 +11,15 @@ namespace peg {
 namespace {
 //! Whitespace inside the GRAMMAR text itself: spaces/tabs only. Newlines
 //! terminate a rule's expression, so grammar parsing must not skip them.
-void SkipInlineWhitespace(const std::string &text, idx_t &pos) {
+void SkipInlineWhitespace(const std::string& text, idx_t& pos) {
 	while (pos < text.size() && (text[pos] == ' ' || text[pos] == '\t' || text[pos] == '\r')) {
 		pos++;
 	}
 }
 } // namespace
 
-const Ast *Ast::Find(const std::string &child_name) const {
-	for (const auto &child : children) {
+const Ast* Ast::Find(const std::string& child_name) const {
+	for (const auto& child : children) {
 		if (child->name == child_name) {
 			return child.get();
 		}
@@ -27,9 +27,9 @@ const Ast *Ast::Find(const std::string &child_name) const {
 	return nullptr;
 }
 
-std::vector<const Ast *> Ast::FindAll(const std::string &child_name) const {
-	std::vector<const Ast *> result;
-	for (const auto &child : children) {
+std::vector<const Ast*> Ast::FindAll(const std::string& child_name) const {
+	std::vector<const Ast*> result;
+	for (const auto& child : children) {
 		if (child->name == child_name) {
 			result.push_back(child.get());
 		}
@@ -43,7 +43,7 @@ std::unique_ptr<Ast> Ast::Clone() const {
 	copy->token = token;
 	copy->start = start;
 	copy->end = end;
-	for (const auto &child : children) {
+	for (const auto& child : children) {
 		copy->children.push_back(child->Clone());
 	}
 	return copy;
@@ -54,37 +54,35 @@ std::string Ast::ToString(idx_t depth) const {
 	result += name;
 	result += " '" + token + "'";
 	result += "\n";
-	for (const auto &child : children) {
+	for (const auto& child : children) {
 		result += child->ToString(depth + 1);
 	}
 	return result;
 }
 
-void Parser::SkipWhitespace(const std::string &input, idx_t &pos) {
+void Parser::SkipWhitespace(const std::string& input, idx_t& pos) {
 	while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
 		pos++;
 	}
 }
 
-bool Parser::IsIdentifierChar(char c) {
-	return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
-}
+bool Parser::IsIdentifierChar(char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; }
 
-Parser::Parser(const std::string &grammar) {
+Parser::Parser(const std::string& grammar) {
 	rules_ = ParseGrammar(grammar);
 	if (rules_.empty()) {
 		throw ParserException("Empty PEG grammar");
 	}
 }
 
-std::unique_ptr<Ast> Parser::Parse(const std::string &input) const {
+std::unique_ptr<Ast> Parser::Parse(const std::string& input) const {
 	MatchContext context;
 	context.input = &input;
 	idx_t pos = 0;
 	std::vector<std::unique_ptr<Ast>> nodes;
 	SkipWhitespace(input, pos);
 	if (!MatchRule(0, context, pos, nodes)) {
-		const std::string &text = input;
+		const std::string& text = input;
 		idx_t line = 1;
 		idx_t column = 1;
 		for (idx_t i = 0; i < context.farthest_failure && i < text.size(); i++) {
@@ -113,7 +111,7 @@ std::unique_ptr<Ast> Parser::Parse(const std::string &input) const {
 // Grammar parsing
 // ---------------------------------------------------------------------------
 
-std::vector<std::unique_ptr<Parser::Rule>> Parser::ParseGrammar(const std::string &grammar) const {
+std::vector<std::unique_ptr<Parser::Rule>> Parser::ParseGrammar(const std::string& grammar) const {
 	std::vector<std::unique_ptr<Rule>> rules;
 	idx_t pos = 0;
 	while (pos < grammar.size()) {
@@ -147,7 +145,7 @@ std::vector<std::unique_ptr<Parser::Rule>> Parser::ParseGrammar(const std::strin
 	return rules;
 }
 
-std::unique_ptr<Parser::Expression> Parser::ParseChoice(const std::string &text, idx_t &pos) const {
+std::unique_ptr<Parser::Expression> Parser::ParseChoice(const std::string& text, idx_t& pos) const {
 	std::vector<std::unique_ptr<Expression>> alternatives;
 	alternatives.push_back(ParseSequence(text, pos));
 	while (true) {
@@ -168,7 +166,7 @@ std::unique_ptr<Parser::Expression> Parser::ParseChoice(const std::string &text,
 	return choice;
 }
 
-std::unique_ptr<Parser::Expression> Parser::ParseSequence(const std::string &text, idx_t &pos) const {
+std::unique_ptr<Parser::Expression> Parser::ParseSequence(const std::string& text, idx_t& pos) const {
 	std::vector<std::unique_ptr<Expression>> elements;
 	while (true) {
 		SkipInlineWhitespace(text, pos);
@@ -193,7 +191,7 @@ std::unique_ptr<Parser::Expression> Parser::ParseSequence(const std::string &tex
 	return sequence;
 }
 
-std::unique_ptr<Parser::Expression> Parser::ParsePrefix(const std::string &text, idx_t &pos) const {
+std::unique_ptr<Parser::Expression> Parser::ParsePrefix(const std::string& text, idx_t& pos) const {
 	if (text[pos] == '&' || text[pos] == '!') {
 		const char op = text[pos];
 		pos++;
@@ -205,7 +203,7 @@ std::unique_ptr<Parser::Expression> Parser::ParsePrefix(const std::string &text,
 	return ParseSuffix(text, pos);
 }
 
-std::unique_ptr<Parser::Expression> Parser::ParseSuffix(const std::string &text, idx_t &pos) const {
+std::unique_ptr<Parser::Expression> Parser::ParseSuffix(const std::string& text, idx_t& pos) const {
 	auto term = ParseTerm(text, pos);
 	if (pos < text.size() && (text[pos] == '?' || text[pos] == '*' || text[pos] == '+')) {
 		const char op = text[pos];
@@ -224,7 +222,7 @@ std::unique_ptr<Parser::Expression> Parser::ParseSuffix(const std::string &text,
 	return term;
 }
 
-std::unique_ptr<Parser::Expression> Parser::ParseTerm(const std::string &text, idx_t &pos) const {
+std::unique_ptr<Parser::Expression> Parser::ParseTerm(const std::string& text, idx_t& pos) const {
 	const char c = text[pos];
 	if (c == '(') {
 		pos++;
@@ -284,7 +282,7 @@ std::unique_ptr<Parser::Expression> Parser::ParseTerm(const std::string &text, i
 		return expression;
 	}
 	throw ParserException(std::string("PEG grammar: unexpected character '") + c + "' at offset " +
-	                      std::to_string(pos));
+						  std::to_string(pos));
 }
 
 // ---------------------------------------------------------------------------
@@ -295,7 +293,7 @@ std::unique_ptr<Parser::Expression> Parser::ParseTerm(const std::string &text, i
 //! is skipped automatically BEFORE sequence elements - except before raw char
 //! classes, so that lexeme rules like Identifier <- [a-zA-Z_] [a-zA-Z0-9_]*
 //! stay contiguous.
-bool Parser::StartsWithCharClass(const Expression &expression) {
+bool Parser::StartsWithCharClass(const Expression& expression) {
 	using Kind = Expression::Kind;
 	switch (expression.kind) {
 	case Kind::CHAR_CLASS:
@@ -310,7 +308,7 @@ bool Parser::StartsWithCharClass(const Expression &expression) {
 	case Kind::SEQUENCE:
 		return StartsWithCharClass(*expression.children[0]);
 	case Kind::CHOICE:
-		for (const auto &alternative : expression.children) {
+		for (const auto& alternative : expression.children) {
 			if (StartsWithCharClass(*alternative)) {
 				return true;
 			}
@@ -321,7 +319,7 @@ bool Parser::StartsWithCharClass(const Expression &expression) {
 	}
 }
 
-bool Parser::MatchCharClass(const std::string &spec, char c) const {
+bool Parser::MatchCharClass(const std::string& spec, char c) const {
 	bool negate = false;
 	idx_t pos = 0;
 	if (pos < spec.size() && spec[pos] == '^') {
@@ -345,9 +343,9 @@ bool Parser::MatchCharClass(const std::string &spec, char c) const {
 	return negate ? !matched : matched;
 }
 
-bool Parser::MatchRule(idx_t rule_index, MatchContext &context, idx_t &pos,
-                       std::vector<std::unique_ptr<Ast>> &nodes) const {
-	const std::string &input = *context.input;
+bool Parser::MatchRule(idx_t rule_index, MatchContext& context, idx_t& pos,
+					   std::vector<std::unique_ptr<Ast>>& nodes) const {
+	const std::string& input = *context.input;
 	const idx_t key = rule_index * (input.size() + 1) + pos;
 	const auto memo = context.memo.find(key);
 	if (memo != context.memo.end()) {
@@ -359,7 +357,7 @@ bool Parser::MatchRule(idx_t rule_index, MatchContext &context, idx_t &pos,
 		return true;
 	}
 
-	const Rule &rule = *rules_[rule_index];
+	const Rule& rule = *rules_[rule_index];
 	const idx_t start = pos;
 	std::vector<std::unique_ptr<Ast>> children;
 	MemoEntry entry;
@@ -383,17 +381,17 @@ bool Parser::MatchRule(idx_t rule_index, MatchContext &context, idx_t &pos,
 	return false;
 }
 
-bool Parser::Match(const Expression &expression, MatchContext &context, idx_t &pos,
-                   std::vector<std::unique_ptr<Ast>> &nodes) const {
-	const std::string &input = *context.input;
+bool Parser::Match(const Expression& expression, MatchContext& context, idx_t& pos,
+				   std::vector<std::unique_ptr<Ast>>& nodes) const {
+	const std::string& input = *context.input;
 	switch (expression.kind) {
 	case Expression::Kind::LITERAL: {
-		const std::string &literal = expression.text;
+		const std::string& literal = expression.text;
 		bool matches = pos + literal.size() <= input.size();
 		if (matches) {
 			for (idx_t i = 0; i < literal.size(); i++) {
 				if (std::tolower(static_cast<unsigned char>(input[pos + i])) !=
-				    std::tolower(static_cast<unsigned char>(literal[i]))) {
+					std::tolower(static_cast<unsigned char>(literal[i]))) {
 					matches = false;
 					break;
 				}
@@ -402,7 +400,7 @@ bool Parser::Match(const Expression &expression, MatchContext &context, idx_t &p
 		// keyword boundary: a literal ending in a word character must not be
 		// immediately followed by another word character
 		if (matches && IsIdentifierChar(literal.back()) && pos + literal.size() < input.size() &&
-		    IsIdentifierChar(input[pos + literal.size()])) {
+			IsIdentifierChar(input[pos + literal.size()])) {
 			matches = false;
 		}
 		if (!matches) {
@@ -442,7 +440,7 @@ bool Parser::Match(const Expression &expression, MatchContext &context, idx_t &p
 	case Expression::Kind::SEQUENCE: {
 		const idx_t start = pos;
 		const idx_t node_start = nodes.size();
-		for (const auto &element : expression.children) {
+		for (const auto& element : expression.children) {
 			if (!StartsWithCharClass(*element)) {
 				SkipWhitespace(input, pos);
 			}
@@ -455,7 +453,7 @@ bool Parser::Match(const Expression &expression, MatchContext &context, idx_t &p
 		return true;
 	}
 	case Expression::Kind::CHOICE: {
-		for (const auto &alternative : expression.children) {
+		for (const auto& alternative : expression.children) {
 			const idx_t start = pos;
 			const idx_t node_start = nodes.size();
 			if (Match(*alternative, context, pos, nodes)) {

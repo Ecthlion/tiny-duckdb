@@ -9,9 +9,9 @@ fi
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
-readarray -t files < <(git ls-files '*.cpp' '*.hpp' '*.h')
-if [[ ${#files[@]} -eq 0 ]]; then
+files="$(git ls-files | grep -E '\.(cpp|hpp|h)$' | grep -v '^third_party/' || true)"
+if [[ -z "${files}" ]]; then
 	exit 0
 fi
 
-clang-format --dry-run --Werror "${files[@]}"
+echo "${files}" | xargs clang-format --dry-run --Werror

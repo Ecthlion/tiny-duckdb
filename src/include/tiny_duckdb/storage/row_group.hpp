@@ -37,24 +37,24 @@ namespace tiny_duckdb {
 //!        list), TableScanMorselsCoverAllRows / TableScanRoundTrip
 //! ============================================================================
 class RowGroup {
-public:
-	explicit RowGroup(const std::vector<LogicalType> &types);
+  public:
+	explicit RowGroup(const std::vector<LogicalType>& types);
 
 	idx_t Count() const;
 	idx_t CapacityLeft() const;
 
 	//! Append count rows from chunk[source_offset ..] (all columns)
-	void Append(DataChunk &chunk, idx_t source_offset, idx_t count);
+	void Append(DataChunk& chunk, idx_t source_offset, idx_t count);
 	//! Append a whole chunk (must fit in the remaining capacity)
-	void Append(DataChunk &chunk);
+	void Append(DataChunk& chunk);
 	//! Read count rows starting at row group offset `offset` for the given
 	//! column ids into out (columns of out match column_ids order)
-	void Scan(idx_t offset, idx_t count, const std::vector<idx_t> &column_ids, DataChunk &out) const;
+	void Scan(idx_t offset, idx_t count, const std::vector<idx_t>& column_ids, DataChunk& out) const;
 
 	//! Zone map check for one column (see ColumnChunk::CheckZoneMap)
-	bool CheckZoneMap(idx_t column_id, const Value &constant, ExpressionType comparison) const;
+	bool CheckZoneMap(idx_t column_id, const Value& constant, ExpressionType comparison) const;
 
-private:
+  private:
 	std::vector<std::unique_ptr<ColumnChunk>> columns_;
 	idx_t count_ = 0;
 };

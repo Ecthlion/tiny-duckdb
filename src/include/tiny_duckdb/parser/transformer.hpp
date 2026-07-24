@@ -17,19 +17,19 @@ namespace tiny_duckdb {
 //! Task L2.T7: TransformCreateTable / TransformInsert (short).
 //! ============================================================================
 class Transformer {
-public:
+  public:
 	//! Entry point: transform the parse tree of the Statement rule
-	std::unique_ptr<Statement> TransformStatement(const peg::Ast &statement);
+	std::unique_ptr<Statement> TransformStatement(const peg::Ast& statement);
 
-private:
-	std::unique_ptr<SelectStatement> TransformSelect(const peg::Ast &node);
-	std::unique_ptr<CreateTableStatement> TransformCreateTable(const peg::Ast &node);
-	std::unique_ptr<InsertStatement> TransformInsert(const peg::Ast &node);
+  private:
+	std::unique_ptr<SelectStatement> TransformSelect(const peg::Ast& node);
+	std::unique_ptr<CreateTableStatement> TransformCreateTable(const peg::Ast& node);
+	std::unique_ptr<InsertStatement> TransformInsert(const peg::Ast& node);
 
-	std::unique_ptr<Expression> TransformExpression(const peg::Ast &node);
-	std::unique_ptr<Expression> TransformLiteral(const peg::Ast &node);
-	ExpressionType TransformComparisonOp(const std::string &op);
-	ExpressionType TransformArithmeticOp(const std::string &op);
+	std::unique_ptr<Expression> TransformExpression(const peg::Ast& node);
+	std::unique_ptr<Expression> TransformLiteral(const peg::Ast& node);
+	ExpressionType TransformComparisonOp(const std::string& op);
+	ExpressionType TransformArithmeticOp(const std::string& op);
 };
 
 } // namespace tiny_duckdb

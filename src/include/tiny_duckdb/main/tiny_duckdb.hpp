@@ -15,11 +15,11 @@ namespace tiny_duckdb {
 //! The result of a query: a schema plus a list of chunks (DuckDB-style
 //! result chunking, so huge results never live in one flat array).
 class QueryResult {
-public:
+  public:
 	QueryResult(std::vector<std::string> names, std::vector<LogicalType> types);
 
-	const std::vector<std::string> &Names() const;
-	const std::vector<LogicalType> &Types() const;
+	const std::vector<std::string>& Names() const;
+	const std::vector<LogicalType>& Types() const;
 	idx_t RowCount() const;
 	Value GetValue(idx_t column, idx_t row) const;
 	std::vector<std::vector<Value>> ToRows() const;
@@ -27,7 +27,7 @@ public:
 
 	void AddChunk(std::unique_ptr<DataChunk> chunk);
 
-private:
+  private:
 	std::vector<std::string> names_;
 	std::vector<LogicalType> types_;
 	std::vector<std::unique_ptr<DataChunk>> chunks_;
@@ -35,27 +35,27 @@ private:
 
 //! The database instance: owns the catalog and the parallelism setting.
 class TinyDuckDB {
-public:
-	Catalog &GetCatalog();
+  public:
+	Catalog& GetCatalog();
 
 	void SetThreads(idx_t threads);
 	idx_t GetThreads() const;
 
-private:
+  private:
 	Catalog catalog_;
-	std::atomic<idx_t> threads_ {4};
+	std::atomic<idx_t> threads_{4};
 };
 
 //! A connection issues queries against a database instance.
 class Connection {
-public:
-	explicit Connection(TinyDuckDB &db);
+  public:
+	explicit Connection(TinyDuckDB& db);
 
 	//! Parse -> bind -> plan -> execute one SQL statement
-	std::unique_ptr<QueryResult> Query(const std::string &sql);
+	std::unique_ptr<QueryResult> Query(const std::string& sql);
 
-private:
-	TinyDuckDB &db_;
+  private:
+	TinyDuckDB& db_;
 };
 
 } // namespace tiny_duckdb

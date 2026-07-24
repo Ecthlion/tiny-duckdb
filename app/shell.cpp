@@ -27,7 +27,7 @@ int main() {
 				break;
 			}
 			if (name == ".tables") {
-				for (const auto &table : db.GetCatalog().ListTables()) {
+				for (const auto& table : db.GetCatalog().ListTables()) {
 					std::cout << table << "\n";
 				}
 				continue;
@@ -53,7 +53,7 @@ int main() {
 			// the grammar does not accept the statement-terminating ';' itself
 			auto result = connection.Query(buffer.substr(0, semicolon));
 			std::cout << result->ToString() << "\n";
-		} catch (const std::exception &ex) {
+		} catch (const std::exception& ex) {
 			std::cout << ex.what() << "\n";
 		}
 		buffer.clear();

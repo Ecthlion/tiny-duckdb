@@ -45,16 +45,16 @@ TEST(Lab0MorselTest, ConcurrentExactlyOnce) {
 				while (queue.NextMorsel(morsel)) {
 					per_thread[t].push_back(morsel);
 				}
-			} catch (const std::exception &) {
+			} catch (const std::exception&) {
 			}
 		});
 	}
-	for (auto &thread : threads) {
+	for (auto& thread : threads) {
 		thread.join();
 	}
 	// every morsel handed out exactly once
 	std::vector<idx_t> all;
-	for (const auto &list : per_thread) {
+	for (const auto& list : per_thread) {
 		all.insert(all.end(), list.begin(), list.end());
 	}
 	std::sort(all.begin(), all.end());
@@ -78,7 +78,7 @@ TEST(Lab0MorselTest, ExhaustedQueueStaysExhausted) {
 TEST(Lab0MorselTest, SingleProducerManyThreads) {
 	// a single morsel must be handed to exactly ONE thread
 	MorselQueue queue(1);
-	std::atomic<idx_t> handed_out {0};
+	std::atomic<idx_t> handed_out{0};
 	std::vector<std::thread> threads;
 	for (idx_t t = 0; t < 8; t++) {
 		threads.emplace_back([&queue, &handed_out] {
@@ -87,12 +87,12 @@ TEST(Lab0MorselTest, SingleProducerManyThreads) {
 				if (queue.NextMorsel(morsel)) {
 					handed_out.fetch_add(1);
 				}
-			} catch (const std::exception &) {
+			} catch (const std::exception&) {
 				// student-edition stub; the EXPECT below reports the failure
 			}
 		});
 	}
-	for (auto &thread : threads) {
+	for (auto& thread : threads) {
 		thread.join();
 	}
 	EXPECT_EQ(handed_out.load(), 1);

@@ -14,16 +14,14 @@ namespace {
 std::unique_ptr<Catalog> MakeCatalog() {
 	auto catalog = std::make_unique<Catalog>();
 	catalog->CreateTable("lineitem", {"l_orderkey", "l_quantity", "l_returnflag"},
-	                     {LogicalType::Integer(), LogicalType::Double(), LogicalType::Varchar()});
-	catalog->CreateTable("orders", {"o_orderkey", "o_custkey"},
-	                     {LogicalType::Integer(), LogicalType::Integer()});
+						 {LogicalType::Integer(), LogicalType::Double(), LogicalType::Varchar()});
+	catalog->CreateTable("orders", {"o_orderkey", "o_custkey"}, {LogicalType::Integer(), LogicalType::Integer()});
 	// shares o_custkey with orders: used to test ambiguity
-	catalog->CreateTable("customer", {"o_custkey", "c_name"},
-	                     {LogicalType::Integer(), LogicalType::Varchar()});
+	catalog->CreateTable("customer", {"o_custkey", "c_name"}, {LogicalType::Integer(), LogicalType::Varchar()});
 	return catalog;
 }
 
-std::unique_ptr<BoundStatement> BindSql(Catalog &catalog, const std::string &sql) {
+std::unique_ptr<BoundStatement> BindSql(Catalog& catalog, const std::string& sql) {
 	SqlParser parser;
 	auto statement = parser.Parse(sql);
 	Binder binder(catalog);
@@ -65,21 +63,20 @@ TEST(Lab2BinderTest, BindUnknownTableThrows) {
 TEST(Lab2BinderTest, BindAmbiguousColumnThrows) {
 	auto catalog = MakeCatalog();
 	// o_custkey exists in both orders and customer
-	EXPECT_THROW(BindSql(*catalog,
-	                     "SELECT o_custkey FROM orders JOIN customer ON orders.o_custkey = customer.o_custkey"),
-	             BinderException);
+	EXPECT_THROW(
+		BindSql(*catalog, "SELECT o_custkey FROM orders JOIN customer ON orders.o_custkey = customer.o_custkey"),
+		BinderException);
 }
 
 TEST(Lab2BinderTest, BindQualifiedResolvesAmbiguity) {
 	auto catalog = MakeCatalog();
-	auto bound = BindSql(*catalog,
-	                     "SELECT orders.o_custkey FROM orders JOIN customer "
-	                     "ON orders.o_custkey = customer.o_custkey");
+	auto bound = BindSql(*catalog, "SELECT orders.o_custkey FROM orders JOIN customer "
+								   "ON orders.o_custkey = customer.o_custkey");
 	EXPECT_EQ(bound->names.size(), 1);
 	// plan: projection over join
 	ASSERT_EQ(bound->plan->type, LogicalOperatorType::LOGICAL_PROJECTION);
 	ASSERT_EQ(bound->plan->children[0]->type, LogicalOperatorType::LOGICAL_JOIN);
-	auto &join = static_cast<LogicalJoin &>(*bound->plan->children[0]);
+	auto& join = static_cast<LogicalJoin&>(*bound->plan->children[0]);
 	EXPECT_EQ(join.conditions.size(), 1);
 }
 
@@ -89,7 +86,7 @@ TEST(Lab2BinderTest, BindAggregateRewrite) {
 	// plan: projection over aggregate over get
 	ASSERT_EQ(bound->plan->type, LogicalOperatorType::LOGICAL_PROJECTION);
 	ASSERT_EQ(bound->plan->children[0]->type, LogicalOperatorType::LOGICAL_AGGREGATE);
-	auto &aggregate = static_cast<LogicalAggregate &>(*bound->plan->children[0]);
+	auto& aggregate = static_cast<LogicalAggregate&>(*bound->plan->children[0]);
 	EXPECT_EQ(aggregate.groups.size(), 1);
 	EXPECT_EQ(aggregate.aggregates.size(), 1);
 	EXPECT_EQ(aggregate.aggregates[0]->type, ExpressionType::AGGREGATE_COUNT_STAR);
@@ -98,8 +95,8 @@ TEST(Lab2BinderTest, BindAggregateRewrite) {
 
 TEST(Lab2BinderTest, BindAggregateTypes) {
 	auto catalog = MakeCatalog();
-	auto bound = BindSql(*catalog,
-	                     "SELECT sum(l_quantity), avg(l_quantity), min(l_orderkey), max(l_returnflag) FROM lineitem");
+	auto bound =
+		BindSql(*catalog, "SELECT sum(l_quantity), avg(l_quantity), min(l_orderkey), max(l_returnflag) FROM lineitem");
 	EXPECT_EQ(bound->types[0].Id(), LogicalTypeId::DOUBLE);
 	EXPECT_EQ(bound->types[1].Id(), LogicalTypeId::DOUBLE);
 	EXPECT_EQ(bound->types[2].Id(), LogicalTypeId::INTEGER);
@@ -119,7 +116,7 @@ TEST(Lab2BinderTest, BindOrderAndLimit) {
 	auto bound = BindSql(*catalog, "SELECT l_orderkey FROM lineitem ORDER BY l_orderkey DESC LIMIT 3");
 	ASSERT_EQ(bound->plan->type, LogicalOperatorType::LOGICAL_LIMIT);
 	ASSERT_EQ(bound->plan->children[0]->type, LogicalOperatorType::LOGICAL_ORDER);
-	auto &order = static_cast<LogicalOrder &>(*bound->plan->children[0]);
+	auto& order = static_cast<LogicalOrder&>(*bound->plan->children[0]);
 	EXPECT_EQ(order.keys.size(), 1);
 	EXPECT_FALSE(order.keys[0].second);
 }
@@ -152,9 +149,9 @@ TEST(Lab2BinderTest, BindAggregateArithmeticRewrite) {
 	auto bound = BindSql(*catalog, "SELECT sum(l_quantity) + 1 FROM lineitem");
 	ASSERT_EQ(bound->plan->type, LogicalOperatorType::LOGICAL_PROJECTION);
 	ASSERT_EQ(bound->plan->children[0]->type, LogicalOperatorType::LOGICAL_AGGREGATE);
-	auto &projection = static_cast<LogicalProjection &>(*bound->plan);
+	auto& projection = static_cast<LogicalProjection&>(*bound->plan);
 	ASSERT_EQ(projection.expressions[0]->type, ExpressionType::OPERATOR_ADD);
-	auto &add = static_cast<BoundOperatorExpression &>(*projection.expressions[0]);
+	auto& add = static_cast<BoundOperatorExpression&>(*projection.expressions[0]);
 	// the left operand is a reference to the aggregate's output column
 	EXPECT_EQ(add.left->type, ExpressionType::COLUMN_REF);
 	EXPECT_EQ(bound->types[0].Id(), LogicalTypeId::DOUBLE);
@@ -163,10 +160,10 @@ TEST(Lab2BinderTest, BindAggregateArithmeticRewrite) {
 TEST(Lab2BinderTest, BindMultipleGroupKeys) {
 	auto catalog = MakeCatalog();
 	auto bound =
-	    BindSql(*catalog, "SELECT l_returnflag, l_orderkey, count(*) FROM lineitem GROUP BY l_returnflag, l_orderkey");
+		BindSql(*catalog, "SELECT l_returnflag, l_orderkey, count(*) FROM lineitem GROUP BY l_returnflag, l_orderkey");
 	ASSERT_EQ(bound->plan->type, LogicalOperatorType::LOGICAL_PROJECTION);
 	ASSERT_EQ(bound->plan->children[0]->type, LogicalOperatorType::LOGICAL_AGGREGATE);
-	auto &aggregate = static_cast<LogicalAggregate &>(*bound->plan->children[0]);
+	auto& aggregate = static_cast<LogicalAggregate&>(*bound->plan->children[0]);
 	EXPECT_EQ(aggregate.groups.size(), 2);
 	EXPECT_EQ(aggregate.aggregates.size(), 1);
 }
@@ -174,8 +171,7 @@ TEST(Lab2BinderTest, BindMultipleGroupKeys) {
 TEST(Lab2BinderTest, BindStarOverJoin) {
 	auto catalog = MakeCatalog();
 	// SELECT * over a join exposes left columns then right columns
-	auto bound = BindSql(*catalog,
-	                     "SELECT * FROM orders JOIN customer ON orders.o_custkey = customer.o_custkey");
+	auto bound = BindSql(*catalog, "SELECT * FROM orders JOIN customer ON orders.o_custkey = customer.o_custkey");
 	EXPECT_EQ(bound->names.size(), 4);
 	EXPECT_EQ(bound->names[0], "orders.o_orderkey");
 	EXPECT_EQ(bound->names[3], "customer.c_name");

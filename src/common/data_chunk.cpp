@@ -7,18 +7,16 @@
 
 namespace tiny_duckdb {
 
-void DataChunk::Initialize(const std::vector<LogicalType> &types) {
+void DataChunk::Initialize(const std::vector<LogicalType>& types) {
 	data_.clear();
 	types_ = types;
-	for (const auto &type : types_) {
+	for (const auto& type : types_) {
 		data_.push_back(std::make_unique<Vector>(type));
 	}
 	count_ = 0;
 }
 
-idx_t DataChunk::size() const {
-	return count_;
-}
+idx_t DataChunk::size() const { return count_; }
 
 void DataChunk::SetCardinality(idx_t count) {
 	if (count > STANDARD_VECTOR_SIZE) {
@@ -27,31 +25,19 @@ void DataChunk::SetCardinality(idx_t count) {
 	count_ = count;
 }
 
-idx_t DataChunk::ColumnCount() const {
-	return data_.size();
-}
+idx_t DataChunk::ColumnCount() const { return data_.size(); }
 
-Vector &DataChunk::GetVector(idx_t column) {
-	return *data_[column];
-}
+Vector& DataChunk::GetVector(idx_t column) { return *data_[column]; }
 
-const Vector &DataChunk::GetVector(idx_t column) const {
-	return *data_[column];
-}
+const Vector& DataChunk::GetVector(idx_t column) const { return *data_[column]; }
 
-const std::vector<LogicalType> &DataChunk::GetTypes() const {
-	return types_;
-}
+const std::vector<LogicalType>& DataChunk::GetTypes() const { return types_; }
 
-Value DataChunk::GetValue(idx_t column, idx_t row) const {
-	return data_[column]->GetValue(row);
-}
+Value DataChunk::GetValue(idx_t column, idx_t row) const { return data_[column]->GetValue(row); }
 
-void DataChunk::SetValue(idx_t column, idx_t row, const Value &value) {
-	data_[column]->SetValue(row, value);
-}
+void DataChunk::SetValue(idx_t column, idx_t row, const Value& value) { data_[column]->SetValue(row, value); }
 
-void DataChunk::Slice(const SelectionVector &sel, idx_t count) {
+void DataChunk::Slice(const SelectionVector& sel, idx_t count) {
 	DataChunk copy;
 	copy.Initialize(types_);
 	copy.SetCardinality(count);
@@ -63,7 +49,7 @@ void DataChunk::Slice(const SelectionVector &sel, idx_t count) {
 	*this = std::move(copy);
 }
 
-void DataChunk::AppendRow(const std::vector<Value> &row) {
+void DataChunk::AppendRow(const std::vector<Value>& row) {
 	if (row.size() != ColumnCount()) {
 		throw ExecutorException("AppendRow: column count mismatch");
 	}
@@ -76,7 +62,7 @@ void DataChunk::AppendRow(const std::vector<Value> &row) {
 	count_++;
 }
 
-void DataChunk::CopyFrom(const DataChunk &other) {
+void DataChunk::CopyFrom(const DataChunk& other) {
 	if (types_ != other.types_) {
 		Initialize(other.types_);
 	}
@@ -91,7 +77,7 @@ void DataChunk::CopyFrom(const DataChunk &other) {
 
 void DataChunk::Reset() {
 	count_ = 0;
-	for (auto &vector : data_) {
+	for (auto& vector : data_) {
 		vector->Reset();
 	}
 }

@@ -55,7 +55,7 @@ namespace tiny_duckdb {
 //! Tests: Lab3ExecutionTest.ExpressionEvaluatorSelect*
 //! ============================================================================
 
-static bool EvaluateComparison(ExpressionType comparison, const Value &left, const Value &right) {
+static bool EvaluateComparison(ExpressionType comparison, const Value& left, const Value& right) {
 	bool eq = Value::Equals(left, right);
 	switch (comparison) {
 	case ExpressionType::COMPARE_EQUAL:
@@ -77,17 +77,17 @@ static bool EvaluateComparison(ExpressionType comparison, const Value &left, con
 
 //! LAB 5 - TASK #3: evaluate two VECTOR children once per DataChunk, then run
 //! the selected distance kernel row by row.
-static void EvaluateVectorDistance(const BoundVectorDistanceExpression &expr, DataChunk &chunk, Vector &result) {
+static void EvaluateVectorDistance(const BoundVectorDistanceExpression& expr, DataChunk& chunk, Vector& result) {
 	// TODO(L5.T3): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L5.T3 not implemented yet");
 }
 
-void ExpressionExecutor::Evaluate(const BoundExpression &expr, DataChunk &chunk, Vector &result) {
+void ExpressionExecutor::Evaluate(const BoundExpression& expr, DataChunk& chunk, Vector& result) {
 	// TODO(L3.T1): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T1 not implemented yet");
 }
 
-idx_t ExpressionExecutor::Select(const BoundExpression &expr, DataChunk &chunk, SelectionVector &sel) {
+idx_t ExpressionExecutor::Select(const BoundExpression& expr, DataChunk& chunk, SelectionVector& sel) {
 	// TODO(L3.T1): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T1 not implemented yet");
 }

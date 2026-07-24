@@ -18,64 +18,40 @@ class ExecutionContext;
 //! state). Mirrors DuckDB's source/sink state split.
 //! ---------------------------------------------------------------------------
 class OperatorState {
-public:
+  public:
 	virtual ~OperatorState() = default;
 
-	template <class T>
-	T &Cast() {
-		return static_cast<T &>(*this);
-	}
-	template <class T>
-	const T &Cast() const {
-		return static_cast<const T &>(*this);
-	}
+	template <class T> T& Cast() { return static_cast<T&>(*this); }
+	template <class T> const T& Cast() const { return static_cast<const T&>(*this); }
 };
 
 class GlobalSourceState {
-public:
+  public:
 	virtual ~GlobalSourceState() = default;
 
-	template <class T>
-	T &Cast() {
-		return static_cast<T &>(*this);
-	}
-	template <class T>
-	const T &Cast() const {
-		return static_cast<const T &>(*this);
-	}
+	template <class T> T& Cast() { return static_cast<T&>(*this); }
+	template <class T> const T& Cast() const { return static_cast<const T&>(*this); }
 };
 
 class GlobalSinkState {
-public:
+  public:
 	virtual ~GlobalSinkState() = default;
 
-	template <class T>
-	T &Cast() {
-		return static_cast<T &>(*this);
-	}
-	template <class T>
-	const T &Cast() const {
-		return static_cast<const T &>(*this);
-	}
+	template <class T> T& Cast() { return static_cast<T&>(*this); }
+	template <class T> const T& Cast() const { return static_cast<const T&>(*this); }
 };
 
 class LocalSinkState {
-public:
+  public:
 	virtual ~LocalSinkState() = default;
 
-	template <class T>
-	T &Cast() {
-		return static_cast<T &>(*this);
-	}
-	template <class T>
-	const T &Cast() const {
-		return static_cast<const T &>(*this);
-	}
+	template <class T> T& Cast() { return static_cast<T&>(*this); }
+	template <class T> const T& Cast() const { return static_cast<const T&>(*this); }
 };
 
 struct SourceInput {
-	OperatorState &state;
-	GlobalSourceState *global_state;
+	OperatorState& state;
+	GlobalSourceState* global_state;
 };
 
 //! Result of an operator's Execute call (DuckDB-style):
@@ -100,10 +76,8 @@ enum class OperatorResultType : uint8_t { NEED_MORE_INPUT = 0, HAVE_MORE_OUTPUT 
 //! A pipeline is: one source -> zero or more operators -> at most one sink.
 //! ============================================================================
 class PhysicalOperator {
-public:
-	PhysicalOperator(PhysicalOperatorType type, std::vector<LogicalType> types)
-	    : type(type), types(std::move(types)) {
-	}
+  public:
+	PhysicalOperator(PhysicalOperatorType type, std::vector<LogicalType> types) : type(type), types(std::move(types)) {}
 	virtual ~PhysicalOperator() = default;
 
 	PhysicalOperatorType type;
@@ -112,36 +86,29 @@ public:
 	std::vector<std::string> names;
 	std::vector<std::unique_ptr<PhysicalOperator>> children;
 
-	template <class T>
-	T &Cast() {
-		return static_cast<T &>(*this);
-	}
-	template <class T>
-	const T &Cast() const {
-		return static_cast<const T &>(*this);
-	}
+	template <class T> T& Cast() { return static_cast<T&>(*this); }
+	template <class T> const T& Cast() const { return static_cast<const T&>(*this); }
 
 	bool IsSink() const {
 		return type == PhysicalOperatorType::HASH_GROUP_BY || type == PhysicalOperatorType::ORDER_BY ||
-		       type == PhysicalOperatorType::LIMIT || type == PhysicalOperatorType::HASH_JOIN ||
-		       type == PhysicalOperatorType::RESULT_COLLECTOR;
+			   type == PhysicalOperatorType::LIMIT || type == PhysicalOperatorType::HASH_JOIN ||
+			   type == PhysicalOperatorType::RESULT_COLLECTOR;
 	}
 
 	// --- source interface ---
-	virtual std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context);
-	virtual std::unique_ptr<GlobalSourceState> GetGlobalSourceState(ExecutionContext &context);
-	virtual void GetData(ExecutionContext &context, DataChunk &chunk, SourceInput &input);
+	virtual std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext& context);
+	virtual std::unique_ptr<GlobalSourceState> GetGlobalSourceState(ExecutionContext& context);
+	virtual void GetData(ExecutionContext& context, DataChunk& chunk, SourceInput& input);
 
 	// --- operator interface ---
-	virtual OperatorResultType Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state);
+	virtual OperatorResultType Execute(ExecutionContext& context, DataChunk& chunk, OperatorState& state);
 
 	// --- sink interface ---
-	virtual std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext &context);
-	virtual std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext &context, GlobalSinkState &gstate);
-	virtual void Sink(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate,
-	                  DataChunk &chunk);
-	virtual void Combine(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate);
-	virtual void Finalize(ExecutionContext &context, GlobalSinkState &gstate);
+	virtual std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext& context);
+	virtual std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext& context, GlobalSinkState& gstate);
+	virtual void Sink(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate, DataChunk& chunk);
+	virtual void Combine(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate);
+	virtual void Finalize(ExecutionContext& context, GlobalSinkState& gstate);
 };
 
 } // namespace tiny_duckdb

@@ -33,7 +33,7 @@ static std::string Lowercase(std::string text) {
 	return text;
 }
 
-ExpressionType Transformer::TransformComparisonOp(const std::string &op) {
+ExpressionType Transformer::TransformComparisonOp(const std::string& op) {
 	if (op == "=") {
 		return ExpressionType::COMPARE_EQUAL;
 	}
@@ -55,7 +55,7 @@ ExpressionType Transformer::TransformComparisonOp(const std::string &op) {
 	throw ParserException("Unknown comparison operator: " + op);
 }
 
-ExpressionType Transformer::TransformArithmeticOp(const std::string &op) {
+ExpressionType Transformer::TransformArithmeticOp(const std::string& op) {
 	if (op == "+") {
 		return ExpressionType::OPERATOR_ADD;
 	}
@@ -86,7 +86,7 @@ ExpressionType Transformer::TransformArithmeticOp(const std::string &op) {
 //!
 //! Tests: Lab2ParserTest.InsertMultipleRows / StringLiteralWithSpaces
 //! ----------------------------------------------------------------------------
-std::unique_ptr<Expression> Transformer::TransformLiteral(const peg::Ast &node) {
+std::unique_ptr<Expression> Transformer::TransformLiteral(const peg::Ast& node) {
 	// TODO(L2.T5): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T5 not implemented yet");
 }
@@ -115,7 +115,7 @@ std::unique_ptr<Expression> Transformer::TransformLiteral(const peg::Ast &node) 
 //!        ParenthesizedArithmetic / ConjunctionChainIsLeftAssociative /
 //!        NegativeLiteral / ComparisonWithArithmetic
 //! ----------------------------------------------------------------------------
-std::unique_ptr<Expression> Transformer::TransformExpression(const peg::Ast &node) {
+std::unique_ptr<Expression> Transformer::TransformExpression(const peg::Ast& node) {
 	// TODO(L2.T5): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T5 not implemented yet");
 }
@@ -143,7 +143,7 @@ std::unique_ptr<Expression> Transformer::TransformExpression(const peg::Ast &nod
 //! Tests: Lab2ParserTest.SelectStar / SelectColumnsWithAlias / JoinOn /
 //!        GroupByOrderByLimit / MultipleOrderKeys / WhereComparison
 //! ----------------------------------------------------------------------------
-std::unique_ptr<SelectStatement> Transformer::TransformSelect(const peg::Ast &node) {
+std::unique_ptr<SelectStatement> Transformer::TransformSelect(const peg::Ast& node) {
 	// TODO(L2.T6): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T6 not implemented yet");
 }
@@ -162,21 +162,21 @@ std::unique_ptr<SelectStatement> Transformer::TransformSelect(const peg::Ast &no
 //!
 //! Tests: Lab2ParserTest.CreateTable / InsertMultipleRows / SyntaxErrorThrows
 //! ----------------------------------------------------------------------------
-std::unique_ptr<CreateTableStatement> Transformer::TransformCreateTable(const peg::Ast &node) {
+std::unique_ptr<CreateTableStatement> Transformer::TransformCreateTable(const peg::Ast& node) {
 	// TODO(L2.T7): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T7 not implemented yet");
 }
 
-std::unique_ptr<InsertStatement> Transformer::TransformInsert(const peg::Ast &node) {
+std::unique_ptr<InsertStatement> Transformer::TransformInsert(const peg::Ast& node) {
 	// TODO(L2.T7): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T7 not implemented yet");
 }
 
-std::unique_ptr<Statement> Transformer::TransformStatement(const peg::Ast &statement) {
+std::unique_ptr<Statement> Transformer::TransformStatement(const peg::Ast& statement) {
 	if (statement.children.empty()) {
 		throw ParserException("Empty statement parse tree");
 	}
-	const peg::Ast &child = *statement.children[0];
+	const peg::Ast& child = *statement.children[0];
 	if (child.name == "SelectStmt") {
 		return TransformSelect(child);
 	}

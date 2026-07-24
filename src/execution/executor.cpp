@@ -4,10 +4,10 @@
 
 namespace tiny_duckdb {
 
-void Executor::Execute(PhysicalOperator &root, TinyDuckDB &db) {
+void Executor::Execute(PhysicalOperator& root, TinyDuckDB& db) {
 	PipelineBuilder builder;
 	auto pipelines = builder.Build(root);
-	for (const auto &pipeline : pipelines) {
+	for (const auto& pipeline : pipelines) {
 		pipeline->Execute(db, db.GetThreads());
 	}
 }

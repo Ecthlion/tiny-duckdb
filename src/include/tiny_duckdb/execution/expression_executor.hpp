@@ -16,13 +16,13 @@ namespace tiny_duckdb {
 //! NULL, and conjunctions treat NULL as false (documented in docs/lab3.md).
 //! ============================================================================
 class ExpressionExecutor {
-public:
+  public:
 	//! Evaluate expr over chunk into result (result has expr.return_type)
-	static void Evaluate(const BoundExpression &expr, DataChunk &chunk, Vector &result);
+	static void Evaluate(const BoundExpression& expr, DataChunk& chunk, Vector& result);
 
 	//! Evaluate a boolean expression; write matching row indexes into sel.
 	//! Returns the number of matching rows.
-	static idx_t Select(const BoundExpression &expr, DataChunk &chunk, SelectionVector &sel);
+	static idx_t Select(const BoundExpression& expr, DataChunk& chunk, SelectionVector& sel);
 };
 
 } // namespace tiny_duckdb

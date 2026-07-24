@@ -14,10 +14,8 @@ namespace tiny_duckdb {
 //! Evaluated by the ExpressionExecutor (Lab 3).
 //! ---------------------------------------------------------------------------
 class BoundExpression {
-public:
-	BoundExpression(ExpressionType type, LogicalType return_type)
-	    : type(type), return_type(std::move(return_type)) {
-	}
+  public:
+	BoundExpression(ExpressionType type, LogicalType return_type) : type(type), return_type(std::move(return_type)) {}
 	virtual ~BoundExpression() = default;
 
 	ExpressionType type;
@@ -26,102 +24,81 @@ public:
 	virtual std::string ToString() const = 0;
 
 	//! DuckDB-style downcast helper
-	template <class T>
-	T &Cast() {
-		return static_cast<T &>(*this);
-	}
-	template <class T>
-	const T &Cast() const {
-		return static_cast<const T &>(*this);
-	}
+	template <class T> T& Cast() { return static_cast<T&>(*this); }
+	template <class T> const T& Cast() const { return static_cast<const T&>(*this); }
 };
 
 //! A reference to column `column_index` of the input chunk
 class BoundColumnRefExpression : public BoundExpression {
-public:
+  public:
 	BoundColumnRefExpression(std::string name, idx_t column_index, LogicalType return_type)
-	    : BoundExpression(ExpressionType::COLUMN_REF, std::move(return_type)), column_index(column_index),
-	      name(std::move(name)) {
-	}
+		: BoundExpression(ExpressionType::COLUMN_REF, std::move(return_type)), column_index(column_index),
+		  name(std::move(name)) {}
 
 	idx_t column_index;
 	std::string name;
 
-	std::string ToString() const override {
-		return name;
-	}
+	std::string ToString() const override { return name; }
 };
 
 class BoundConstantExpression : public BoundExpression {
-public:
+  public:
 	explicit BoundConstantExpression(Value value)
-	    : BoundExpression(ExpressionType::VALUE_CONSTANT, value.GetType()), value(std::move(value)) {
-	}
+		: BoundExpression(ExpressionType::VALUE_CONSTANT, value.GetType()), value(std::move(value)) {}
 
 	Value value;
 
-	std::string ToString() const override {
-		return value.ToString();
-	}
+	std::string ToString() const override { return value.ToString(); }
 };
 
 class BoundComparisonExpression : public BoundExpression {
-public:
+  public:
 	BoundComparisonExpression(ExpressionType comparison, std::unique_ptr<BoundExpression> left_p,
-	                          std::unique_ptr<BoundExpression> right_p)
-	    : BoundExpression(comparison, LogicalType::Boolean()), left(std::move(left_p)), right(std::move(right_p)) {
-	}
+							  std::unique_ptr<BoundExpression> right_p)
+		: BoundExpression(comparison, LogicalType::Boolean()), left(std::move(left_p)), right(std::move(right_p)) {}
 
 	std::unique_ptr<BoundExpression> left;
 	std::unique_ptr<BoundExpression> right;
 
-	std::string ToString() const override {
-		return "(" + left->ToString() + " cmp " + right->ToString() + ")";
-	}
+	std::string ToString() const override { return "(" + left->ToString() + " cmp " + right->ToString() + ")"; }
 };
 
 class BoundConjunctionExpression : public BoundExpression {
-public:
+  public:
 	BoundConjunctionExpression(ExpressionType conjunction, std::unique_ptr<BoundExpression> left_p,
-	                           std::unique_ptr<BoundExpression> right_p)
-	    : BoundExpression(conjunction, LogicalType::Boolean()), left(std::move(left_p)), right(std::move(right_p)) {
-	}
+							   std::unique_ptr<BoundExpression> right_p)
+		: BoundExpression(conjunction, LogicalType::Boolean()), left(std::move(left_p)), right(std::move(right_p)) {}
 
 	std::unique_ptr<BoundExpression> left;
 	std::unique_ptr<BoundExpression> right;
 
 	std::string ToString() const override {
 		return "(" + left->ToString() + (type == ExpressionType::CONJUNCTION_AND ? " AND " : " OR ") +
-		       right->ToString() + ")";
+			   right->ToString() + ")";
 	}
 };
 
 class BoundOperatorExpression : public BoundExpression {
-public:
+  public:
 	BoundOperatorExpression(ExpressionType op, std::unique_ptr<BoundExpression> left_p,
-	                        std::unique_ptr<BoundExpression> right_p, LogicalType return_type)
-	    : BoundExpression(op, std::move(return_type)), left(std::move(left_p)), right(std::move(right_p)) {
-	}
+							std::unique_ptr<BoundExpression> right_p, LogicalType return_type)
+		: BoundExpression(op, std::move(return_type)), left(std::move(left_p)), right(std::move(right_p)) {}
 
 	std::unique_ptr<BoundExpression> left;
 	std::unique_ptr<BoundExpression> right;
 
-	std::string ToString() const override {
-		return "(" + left->ToString() + " op " + right->ToString() + ")";
-	}
+	std::string ToString() const override { return "(" + left->ToString() + " op " + right->ToString() + ")"; }
 };
 
 enum class VectorDistanceType : uint8_t { L2, COSINE, NEGATIVE_INNER_PRODUCT };
 
 //! A scalar distance expression over two fixed-length VECTOR values.
 class BoundVectorDistanceExpression : public BoundExpression {
-public:
+  public:
 	BoundVectorDistanceExpression(VectorDistanceType distance_type_p, std::unique_ptr<BoundExpression> left_p,
-	                              std::unique_ptr<BoundExpression> right_p, std::string function_name_p)
-	    : BoundExpression(ExpressionType::VECTOR_DISTANCE, LogicalType::Double()),
-	      distance_type(distance_type_p), left(std::move(left_p)), right(std::move(right_p)),
-	      function_name(std::move(function_name_p)) {
-	}
+								  std::unique_ptr<BoundExpression> right_p, std::string function_name_p)
+		: BoundExpression(ExpressionType::VECTOR_DISTANCE, LogicalType::Double()), distance_type(distance_type_p),
+		  left(std::move(left_p)), right(std::move(right_p)), function_name(std::move(function_name_p)) {}
 
 	VectorDistanceType distance_type;
 	std::unique_ptr<BoundExpression> left;
@@ -135,17 +112,14 @@ public:
 
 //! An aggregate function over child rows. child is null for count(*).
 class BoundAggregateExpression : public BoundExpression {
-public:
+  public:
 	BoundAggregateExpression(ExpressionType aggregate, std::unique_ptr<BoundExpression> child_p,
-	                         LogicalType return_type)
-	    : BoundExpression(aggregate, std::move(return_type)), child(std::move(child_p)) {
-	}
+							 LogicalType return_type)
+		: BoundExpression(aggregate, std::move(return_type)), child(std::move(child_p)) {}
 
 	std::unique_ptr<BoundExpression> child;
 
-	std::string ToString() const override {
-		return "agg(" + (child ? child->ToString() : std::string("*")) + ")";
-	}
+	std::string ToString() const override { return "agg(" + (child ? child->ToString() : std::string("*")) + ")"; }
 };
 
 } // namespace tiny_duckdb

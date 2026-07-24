@@ -15,9 +15,8 @@ namespace tiny_duckdb {
 //! A fully bound statement: logical plan (SELECT) or direct catalog/data
 //! operations (CREATE TABLE / INSERT).
 class BoundStatement {
-public:
-	explicit BoundStatement(StatementType type) : type(type) {
-	}
+  public:
+	explicit BoundStatement(StatementType type) : type(type) {}
 
 	StatementType type;
 
@@ -31,21 +30,19 @@ public:
 	std::vector<ColumnDefinition> columns;
 
 	// INSERT
-	TableData *insert_table = nullptr;
+	TableData* insert_table = nullptr;
 	std::vector<std::vector<Value>> rows;
 };
 
 //! The scope a SELECT binds against: the columns produced by the FROM clause.
 struct BindScope {
 	std::vector<std::string> tables; // owning table per column (normalized)
-	std::vector<std::string> names;  // column name per column (normalized)
+	std::vector<std::string> names;	 // column name per column (normalized)
 	std::vector<LogicalType> types;
 
-	idx_t ColumnCount() const {
-		return names.size();
-	}
+	idx_t ColumnCount() const { return names.size(); }
 	//! Resolve a column reference to an index; throws BinderException
-	idx_t Resolve(const ColumnRefExpression &ref) const;
+	idx_t Resolve(const ColumnRefExpression& ref) const;
 };
 
 //! ============================================================================
@@ -62,27 +59,26 @@ struct BindScope {
 //!        └ LogicalGet | LogicalJoin
 //! ============================================================================
 class Binder {
-public:
-	explicit Binder(Catalog &catalog) : catalog_(catalog) {
-	}
+  public:
+	explicit Binder(Catalog& catalog) : catalog_(catalog) {}
 
-	std::unique_ptr<BoundStatement> Bind(Statement &statement);
+	std::unique_ptr<BoundStatement> Bind(Statement& statement);
 
-private:
-	std::unique_ptr<BoundStatement> BindSelect(SelectStatement &statement);
-	std::unique_ptr<BoundStatement> BindCreateTable(CreateTableStatement &statement);
-	std::unique_ptr<BoundStatement> BindInsert(InsertStatement &statement);
+  private:
+	std::unique_ptr<BoundStatement> BindSelect(SelectStatement& statement);
+	std::unique_ptr<BoundStatement> BindCreateTable(CreateTableStatement& statement);
+	std::unique_ptr<BoundStatement> BindInsert(InsertStatement& statement);
 
-	std::unique_ptr<BoundExpression> BindExpression(Expression &expression, const BindScope &scope);
-	std::unique_ptr<BoundExpression> BindVectorDistance(FunctionExpression &function, const BindScope &scope);
-	std::unique_ptr<BoundAggregateExpression> BindAggregate(FunctionExpression &function, const BindScope &scope);
+	std::unique_ptr<BoundExpression> BindExpression(Expression& expression, const BindScope& scope);
+	std::unique_ptr<BoundExpression> BindVectorDistance(FunctionExpression& function, const BindScope& scope);
+	std::unique_ptr<BoundAggregateExpression> BindAggregate(FunctionExpression& function, const BindScope& scope);
 	//! Rewrite a select-list expression to run above the aggregation node
-	std::unique_ptr<BoundExpression> RewriteAfterAggregate(
-	    Expression &expression, const std::vector<Expression *> &group_asts,
-	    const std::vector<LogicalType> &group_types,
-	    std::vector<std::unique_ptr<BoundAggregateExpression>> &aggregates, const BindScope &scope);
+	std::unique_ptr<BoundExpression>
+	RewriteAfterAggregate(Expression& expression, const std::vector<Expression*>& group_asts,
+						  const std::vector<LogicalType>& group_types,
+						  std::vector<std::unique_ptr<BoundAggregateExpression>>& aggregates, const BindScope& scope);
 
-	Catalog &catalog_;
+	Catalog& catalog_;
 };
 
 } // namespace tiny_duckdb

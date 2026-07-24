@@ -14,20 +14,20 @@ namespace tiny_duckdb {
 //! The catalog maps table names to tables. Names are case-insensitive
 //! (stored lower-case), like DuckDB.
 class Catalog {
-public:
+  public:
 	//! Create a table; throws CatalogException if it already exists
-	void CreateTable(const std::string &name, const std::vector<std::string> &column_names,
-	                 const std::vector<LogicalType> &column_types);
+	void CreateTable(const std::string& name, const std::vector<std::string>& column_names,
+					 const std::vector<LogicalType>& column_types);
 
 	//! Look up a table; throws CatalogException if it does not exist
-	TableData &GetTable(const std::string &name) const;
+	TableData& GetTable(const std::string& name) const;
 
-	bool TableExists(const std::string &name) const;
+	bool TableExists(const std::string& name) const;
 	std::vector<std::string> ListTables() const;
 
-	static std::string NormalizeName(const std::string &name);
+	static std::string NormalizeName(const std::string& name);
 
-private:
+  private:
 	mutable std::mutex lock_;
 	std::map<std::string, std::unique_ptr<TableData>> tables_;
 };

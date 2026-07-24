@@ -50,17 +50,17 @@ namespace {
 
 //! Shared materialization state used by both ORDER BY and LIMIT
 class MaterializeGlobalSinkState : public GlobalSinkState {
-public:
+  public:
 	std::vector<std::vector<Value>> rows;
 	std::mutex lock;
 };
 
 class MaterializeLocalSinkState : public LocalSinkState {
-public:
+  public:
 	std::vector<std::vector<Value>> rows;
 };
 
-void MaterializeChunk(DataChunk &chunk, std::vector<std::vector<Value>> &rows) {
+void MaterializeChunk(DataChunk& chunk, std::vector<std::vector<Value>>& rows) {
 	for (idx_t row = 0; row < chunk.size(); row++) {
 		std::vector<Value> values;
 		for (idx_t col = 0; col < chunk.ColumnCount(); col++) {
@@ -70,15 +70,15 @@ void MaterializeChunk(DataChunk &chunk, std::vector<std::vector<Value>> &rows) {
 	}
 }
 
-void CombineRows(MaterializeGlobalSinkState &global, MaterializeLocalSinkState &local) {
+void CombineRows(MaterializeGlobalSinkState& global, MaterializeLocalSinkState& local) {
 	std::lock_guard<std::mutex> guard(global.lock);
-	for (auto &row : local.rows) {
+	for (auto& row : local.rows) {
 		global.rows.push_back(std::move(row));
 	}
 	local.rows.clear();
 }
 
-idx_t EmitRows(const std::vector<std::vector<Value>> &rows, std::atomic<idx_t> &emit_offset, DataChunk &chunk) {
+idx_t EmitRows(const std::vector<std::vector<Value>>& rows, std::atomic<idx_t>& emit_offset, DataChunk& chunk) {
 	idx_t offset = emit_offset.fetch_add(STANDARD_VECTOR_SIZE);
 	if (offset >= rows.size()) {
 		chunk.SetCardinality(0);
@@ -101,35 +101,35 @@ idx_t EmitRows(const std::vector<std::vector<Value>> &rows, std::atomic<idx_t> &
 // ---------------------------------------------------------------------------
 
 PhysicalOrderBy::PhysicalOrderBy(std::vector<std::pair<idx_t, bool>> keys_p, std::vector<LogicalType> types_p,
-                                 std::vector<std::string> names_p)
-    : PhysicalOperator(PhysicalOperatorType::ORDER_BY, std::move(types_p)), keys(std::move(keys_p)) {
+								 std::vector<std::string> names_p)
+	: PhysicalOperator(PhysicalOperatorType::ORDER_BY, std::move(types_p)), keys(std::move(keys_p)) {
 	names = std::move(names_p);
 }
 
-std::unique_ptr<GlobalSinkState> PhysicalOrderBy::GetGlobalSinkState(ExecutionContext & /*context*/) {
+std::unique_ptr<GlobalSinkState> PhysicalOrderBy::GetGlobalSinkState(ExecutionContext& /*context*/) {
 	return std::make_unique<MaterializeGlobalSinkState>();
 }
 
-std::unique_ptr<LocalSinkState> PhysicalOrderBy::GetLocalSinkState(ExecutionContext & /*context*/,
-                                                                   GlobalSinkState & /*gstate*/) {
+std::unique_ptr<LocalSinkState> PhysicalOrderBy::GetLocalSinkState(ExecutionContext& /*context*/,
+																   GlobalSinkState& /*gstate*/) {
 	return std::make_unique<MaterializeLocalSinkState>();
 }
 
-void PhysicalOrderBy::Sink(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState &lstate,
-                           DataChunk &chunk) {
+void PhysicalOrderBy::Sink(ExecutionContext& /*context*/, GlobalSinkState& /*gstate*/, LocalSinkState& lstate,
+						   DataChunk& chunk) {
 	MaterializeChunk(chunk, lstate.Cast<MaterializeLocalSinkState>().rows);
 }
 
-void PhysicalOrderBy::Combine(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
+void PhysicalOrderBy::Combine(ExecutionContext& /*context*/, GlobalSinkState& gstate, LocalSinkState& lstate) {
 	CombineRows(gstate.Cast<MaterializeGlobalSinkState>(), lstate.Cast<MaterializeLocalSinkState>());
 }
 
-void PhysicalOrderBy::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
+void PhysicalOrderBy::Finalize(ExecutionContext& /*context*/, GlobalSinkState& gstate) {
 	// TODO(L3.T6): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T6 not implemented yet");
 }
 
-void PhysicalOrderBy::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput & /*input*/) {
+void PhysicalOrderBy::GetData(ExecutionContext& /*context*/, DataChunk& chunk, SourceInput& /*input*/) {
 	EmitRows(result_rows_, emit_offset_, chunk);
 }
 
@@ -138,35 +138,35 @@ void PhysicalOrderBy::GetData(ExecutionContext & /*context*/, DataChunk &chunk, 
 // ---------------------------------------------------------------------------
 
 PhysicalLimit::PhysicalLimit(int64_t limit_p, std::vector<LogicalType> types_p, std::vector<std::string> names_p)
-    : PhysicalOperator(PhysicalOperatorType::LIMIT, std::move(types_p)), limit(limit_p) {
+	: PhysicalOperator(PhysicalOperatorType::LIMIT, std::move(types_p)), limit(limit_p) {
 	names = std::move(names_p);
 }
 
-std::unique_ptr<GlobalSinkState> PhysicalLimit::GetGlobalSinkState(ExecutionContext & /*context*/) {
+std::unique_ptr<GlobalSinkState> PhysicalLimit::GetGlobalSinkState(ExecutionContext& /*context*/) {
 	return std::make_unique<MaterializeGlobalSinkState>();
 }
 
-std::unique_ptr<LocalSinkState> PhysicalLimit::GetLocalSinkState(ExecutionContext & /*context*/,
-                                                                 GlobalSinkState & /*gstate*/) {
+std::unique_ptr<LocalSinkState> PhysicalLimit::GetLocalSinkState(ExecutionContext& /*context*/,
+																 GlobalSinkState& /*gstate*/) {
 	return std::make_unique<MaterializeLocalSinkState>();
 }
 
-void PhysicalLimit::Sink(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState & /*lstate*/,
-                         DataChunk &chunk) {
+void PhysicalLimit::Sink(ExecutionContext& /*context*/, GlobalSinkState& gstate, LocalSinkState& /*lstate*/,
+						 DataChunk& chunk) {
 	// TODO(L3.T6): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T6 not implemented yet");
 }
 
-void PhysicalLimit::Combine(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState & /*lstate*/) {
+void PhysicalLimit::Combine(ExecutionContext& /*context*/, GlobalSinkState& /*gstate*/, LocalSinkState& /*lstate*/) {
 	// Sink wrote straight into the global state; nothing to combine
 }
 
-void PhysicalLimit::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
-	auto &global = gstate.Cast<MaterializeGlobalSinkState>();
+void PhysicalLimit::Finalize(ExecutionContext& /*context*/, GlobalSinkState& gstate) {
+	auto& global = gstate.Cast<MaterializeGlobalSinkState>();
 	result_rows_ = std::move(global.rows);
 }
 
-void PhysicalLimit::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput & /*input*/) {
+void PhysicalLimit::GetData(ExecutionContext& /*context*/, DataChunk& chunk, SourceInput& /*input*/) {
 	EmitRows(result_rows_, emit_offset_, chunk);
 }
 

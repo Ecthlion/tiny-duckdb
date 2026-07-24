@@ -55,15 +55,15 @@ namespace tiny_duckdb {
 //! Tests: Lab3ExecutionTest.Join*
 //! ============================================================================
 
-size_t VectorValueHash::operator()(const std::vector<Value> &key) const {
+size_t VectorValueHash::operator()(const std::vector<Value>& key) const {
 	uint64_t hash = 0;
-	for (const auto &value : key) {
+	for (const auto& value : key) {
 		hash = hash * 31 + value.Hash();
 	}
 	return static_cast<size_t>(hash);
 }
 
-bool VectorValueEqual::operator()(const std::vector<Value> &left, const std::vector<Value> &right) const {
+bool VectorValueEqual::operator()(const std::vector<Value>& left, const std::vector<Value>& right) const {
 	if (left.size() != right.size()) {
 		return false;
 	}
@@ -78,8 +78,8 @@ bool VectorValueEqual::operator()(const std::vector<Value> &left, const std::vec
 namespace {
 
 //! SQL semantics: a NULL join key never matches anything
-bool KeyHasNull(const std::vector<Value> &key) {
-	for (const auto &value : key) {
+bool KeyHasNull(const std::vector<Value>& key) {
+	for (const auto& value : key) {
 		if (value.IsNull()) {
 			return true;
 		}
@@ -88,18 +88,18 @@ bool KeyHasNull(const std::vector<Value> &key) {
 }
 
 class HashJoinGlobalSinkState : public GlobalSinkState {
-public:
+  public:
 	std::vector<PhysicalHashJoin::BuildRow> rows;
 	std::mutex lock;
 };
 
 class HashJoinLocalSinkState : public LocalSinkState {
-public:
+  public:
 	std::vector<PhysicalHashJoin::BuildRow> rows;
 };
 
 class HashJoinProbeState : public OperatorState {
-public:
+  public:
 	DataChunk pending_input;
 	std::vector<std::vector<Value>> pending_keys;
 	bool has_pending = false;
@@ -112,15 +112,16 @@ public:
 } // namespace
 
 PhysicalHashJoin::PhysicalHashJoin(
-    std::vector<std::pair<std::unique_ptr<BoundExpression>, std::unique_ptr<BoundExpression>>> conditions_p,
-    std::vector<LogicalType> probe_types_p, std::vector<LogicalType> build_types_p, std::vector<std::string> names_p)
-    : PhysicalOperator(PhysicalOperatorType::HASH_JOIN, [&] {
-	      std::vector<LogicalType> output = probe_types_p;
-	      output.insert(output.end(), build_types_p.begin(), build_types_p.end());
-	      return output;
-	  }()),
-      conditions(std::move(conditions_p)), probe_types(std::move(probe_types_p)),
-      build_types(std::move(build_types_p)) {
+	std::vector<std::pair<std::unique_ptr<BoundExpression>, std::unique_ptr<BoundExpression>>> conditions_p,
+	std::vector<LogicalType> probe_types_p, std::vector<LogicalType> build_types_p, std::vector<std::string> names_p)
+	: PhysicalOperator(PhysicalOperatorType::HASH_JOIN,
+					   [&] {
+						   std::vector<LogicalType> output = probe_types_p;
+						   output.insert(output.end(), build_types_p.begin(), build_types_p.end());
+						   return output;
+					   }()),
+	  conditions(std::move(conditions_p)), probe_types(std::move(probe_types_p)),
+	  build_types(std::move(build_types_p)) {
 	names = std::move(names_p);
 }
 
@@ -128,27 +129,27 @@ PhysicalHashJoin::PhysicalHashJoin(
 // BUILD side (sink): materialize the right child into a hash table
 // ---------------------------------------------------------------------------
 
-std::unique_ptr<GlobalSinkState> PhysicalHashJoin::GetGlobalSinkState(ExecutionContext & /*context*/) {
+std::unique_ptr<GlobalSinkState> PhysicalHashJoin::GetGlobalSinkState(ExecutionContext& /*context*/) {
 	return std::make_unique<HashJoinGlobalSinkState>();
 }
 
-std::unique_ptr<LocalSinkState> PhysicalHashJoin::GetLocalSinkState(ExecutionContext & /*context*/,
-                                                                    GlobalSinkState & /*gstate*/) {
+std::unique_ptr<LocalSinkState> PhysicalHashJoin::GetLocalSinkState(ExecutionContext& /*context*/,
+																	GlobalSinkState& /*gstate*/) {
 	return std::make_unique<HashJoinLocalSinkState>();
 }
 
-void PhysicalHashJoin::Sink(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState &lstate,
-                            DataChunk &chunk) {
+void PhysicalHashJoin::Sink(ExecutionContext& /*context*/, GlobalSinkState& /*gstate*/, LocalSinkState& lstate,
+							DataChunk& chunk) {
 	// TODO(L3.T5): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T5 not implemented yet");
 }
 
-void PhysicalHashJoin::Combine(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
+void PhysicalHashJoin::Combine(ExecutionContext& /*context*/, GlobalSinkState& gstate, LocalSinkState& lstate) {
 	// TODO(L3.T5): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T5 not implemented yet");
 }
 
-void PhysicalHashJoin::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
+void PhysicalHashJoin::Finalize(ExecutionContext& /*context*/, GlobalSinkState& gstate) {
 	// TODO(L3.T5): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T5 not implemented yet");
 }
@@ -157,14 +158,14 @@ void PhysicalHashJoin::Finalize(ExecutionContext & /*context*/, GlobalSinkState 
 // PROBE side (operator): match incoming chunks against the hash table
 // ---------------------------------------------------------------------------
 
-std::unique_ptr<OperatorState> PhysicalHashJoin::GetOperatorState(ExecutionContext & /*context*/) {
+std::unique_ptr<OperatorState> PhysicalHashJoin::GetOperatorState(ExecutionContext& /*context*/) {
 	auto result = std::make_unique<HashJoinProbeState>();
 	result->pending_input.Initialize(probe_types);
 	result->output.Initialize(types);
 	return result;
 }
 
-OperatorResultType PhysicalHashJoin::Execute(ExecutionContext & /*context*/, DataChunk &chunk, OperatorState &state) {
+OperatorResultType PhysicalHashJoin::Execute(ExecutionContext& /*context*/, DataChunk& chunk, OperatorState& state) {
 	// TODO(L3.T5): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T5 not implemented yet");
 }

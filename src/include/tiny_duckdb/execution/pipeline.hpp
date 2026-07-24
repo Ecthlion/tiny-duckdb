@@ -18,27 +18,26 @@ class TinyDuckDB;
 //! pipeline via morsels.
 //! ============================================================================
 class Pipeline {
-public:
-	void Execute(TinyDuckDB &db, idx_t thread_count);
+  public:
+	void Execute(TinyDuckDB& db, idx_t thread_count);
 
-	PhysicalOperator *source = nullptr;
-	std::vector<PhysicalOperator *> operators;
-	PhysicalOperator *sink = nullptr;
+	PhysicalOperator* source = nullptr;
+	std::vector<PhysicalOperator*> operators;
+	PhysicalOperator* sink = nullptr;
 
-private:
-	void ExecuteWorker(ExecutionContext &context, GlobalSourceState *global_source,
-	                   GlobalSinkState *global_sink);
+  private:
+	void ExecuteWorker(ExecutionContext& context, GlobalSourceState* global_source, GlobalSinkState* global_sink);
 };
 
 //! Splits a physical plan tree into pipelines in dependency order.
 class PipelineBuilder {
-public:
+  public:
 	//! Build all pipelines for the plan rooted at `root` (the result
 	//! collector). Returned in execution order: dependencies first.
-	std::vector<std::unique_ptr<Pipeline>> Build(PhysicalOperator &root);
+	std::vector<std::unique_ptr<Pipeline>> Build(PhysicalOperator& root);
 
-private:
-	void BuildRecursive(PhysicalOperator &op, Pipeline &current);
+  private:
+	void BuildRecursive(PhysicalOperator& op, Pipeline& current);
 
 	std::vector<std::unique_ptr<Pipeline>> pipelines_;
 };

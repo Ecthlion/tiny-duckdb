@@ -32,19 +32,20 @@ ExpressionType FlipComparison(ExpressionType comparison) {
 //! Extract `column CMP constant` conjuncts as zone-map table filters.
 //! column indexes refer to scan output positions; map them back to table
 //! column ids through the LogicalGet's column_ids.
-void ExtractTableFilters(BoundExpression &predicate, LogicalGet &get, std::vector<TableFilter> &out) {
+void ExtractTableFilters(BoundExpression& predicate, LogicalGet& get, std::vector<TableFilter>& out) {
 	if (predicate.type == ExpressionType::CONJUNCTION_AND) {
-		auto &conj = predicate.Cast<BoundConjunctionExpression>();
+		auto& conj = predicate.Cast<BoundConjunctionExpression>();
 		ExtractTableFilters(*conj.left, get, out);
 		ExtractTableFilters(*conj.right, get, out);
 		return;
 	}
-	if (predicate.type < ExpressionType::COMPARE_EQUAL || predicate.type > ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL) {
+	if (predicate.type < ExpressionType::COMPARE_EQUAL ||
+		predicate.type > ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL) {
 		return;
 	}
-	auto &cmp = predicate.Cast<BoundComparisonExpression>();
-	BoundColumnRefExpression *column = nullptr;
-	BoundConstantExpression *constant = nullptr;
+	auto& cmp = predicate.Cast<BoundComparisonExpression>();
+	BoundColumnRefExpression* column = nullptr;
+	BoundConstantExpression* constant = nullptr;
 	ExpressionType comparison = predicate.type;
 	if (cmp.left->type == ExpressionType::COLUMN_REF && cmp.right->type == ExpressionType::VALUE_CONSTANT) {
 		column = &cmp.left->Cast<BoundColumnRefExpression>();
@@ -69,24 +70,24 @@ void ExtractTableFilters(BoundExpression &predicate, LogicalGet &get, std::vecto
 
 } // namespace
 
-std::unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlan(LogicalOperator &op) {
+std::unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlan(LogicalOperator& op) {
 	return CreatePlanInternal(op);
 }
 
-std::unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlanInternal(LogicalOperator &op) {
+std::unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlanInternal(LogicalOperator& op) {
 	switch (op.type) {
 	case LogicalOperatorType::LOGICAL_GET: {
-		auto &get = op.Cast<LogicalGet>();
+		auto& get = op.Cast<LogicalGet>();
 		return std::make_unique<PhysicalTableScan>(get.table, get.column_ids, get.types, get.names,
-		                                      std::vector<TableFilter>());
+												   std::vector<TableFilter>());
 	}
 	case LogicalOperatorType::LOGICAL_FILTER: {
-		auto &filter = op.Cast<LogicalFilter>();
+		auto& filter = op.Cast<LogicalFilter>();
 		auto child = CreatePlanInternal(*op.children[0]);
 		std::vector<TableFilter> table_filters;
 		if (child->type == PhysicalOperatorType::TABLE_SCAN) {
 			// L3.T3: push `column CMP constant` predicates down to the scan
-			auto &get = op.children[0]->Cast<LogicalGet>();
+			auto& get = op.children[0]->Cast<LogicalGet>();
 			ExtractTableFilters(*filter.predicate, get, table_filters);
 			child->Cast<PhysicalTableScan>().table_filters = std::move(table_filters);
 		}
@@ -95,36 +96,36 @@ std::unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlanInternal(Logi
 		return result;
 	}
 	case LogicalOperatorType::LOGICAL_PROJECTION: {
-		auto &proj = op.Cast<LogicalProjection>();
+		auto& proj = op.Cast<LogicalProjection>();
 		auto result = std::make_unique<PhysicalProjection>(std::move(proj.expressions), op.types, op.names);
 		result->children.push_back(CreatePlanInternal(*op.children[0]));
 		return result;
 	}
 	case LogicalOperatorType::LOGICAL_AGGREGATE: {
-		auto &agg = op.Cast<LogicalAggregate>();
+		auto& agg = op.Cast<LogicalAggregate>();
 		auto result = std::make_unique<PhysicalHashAggregate>(std::move(agg.groups), std::move(agg.aggregates),
-		                                                 op.types, op.names);
+															  op.types, op.names);
 		result->children.push_back(CreatePlanInternal(*op.children[0]));
 		return result;
 	}
 	case LogicalOperatorType::LOGICAL_JOIN: {
-		auto &join = op.Cast<LogicalJoin>();
+		auto& join = op.Cast<LogicalJoin>();
 		auto left = CreatePlanInternal(*op.children[0]);
 		auto right = CreatePlanInternal(*op.children[1]);
-		auto result = std::make_unique<PhysicalHashJoin>(std::move(join.conditions), left->types, right->types,
-		                                            op.names);
+		auto result =
+			std::make_unique<PhysicalHashJoin>(std::move(join.conditions), left->types, right->types, op.names);
 		result->children.push_back(std::move(left));
 		result->children.push_back(std::move(right));
 		return result;
 	}
 	case LogicalOperatorType::LOGICAL_ORDER: {
-		auto &order = op.Cast<LogicalOrder>();
+		auto& order = op.Cast<LogicalOrder>();
 		auto result = std::make_unique<PhysicalOrderBy>(std::move(order.keys), op.types, op.names);
 		result->children.push_back(CreatePlanInternal(*op.children[0]));
 		return result;
 	}
 	case LogicalOperatorType::LOGICAL_LIMIT: {
-		auto &limit = op.Cast<LogicalLimit>();
+		auto& limit = op.Cast<LogicalLimit>();
 		auto result = std::make_unique<PhysicalLimit>(limit.limit, op.types, op.names);
 		result->children.push_back(CreatePlanInternal(*op.children[0]));
 		return result;

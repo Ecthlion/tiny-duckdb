@@ -7,11 +7,9 @@
 
 namespace tiny_duckdb {
 
-static std::string Normalize(const std::string &name) {
-	return Catalog::NormalizeName(name);
-}
+static std::string Normalize(const std::string& name) { return Catalog::NormalizeName(name); }
 
-idx_t BindScope::Resolve(const ColumnRefExpression &ref) const {
+idx_t BindScope::Resolve(const ColumnRefExpression& ref) const {
 	const std::string column = Normalize(ref.column);
 	if (ref.IsQualified()) {
 		const std::string table = Normalize(ref.table);
@@ -26,8 +24,7 @@ idx_t BindScope::Resolve(const ColumnRefExpression &ref) const {
 	for (idx_t i = 0; i < names.size(); i++) {
 		if (names[i] == column) {
 			if (found != static_cast<idx_t>(-1)) {
-				throw BinderException("Ambiguous column reference: " + ref.column +
-				                      " (qualify it with a table name)");
+				throw BinderException("Ambiguous column reference: " + ref.column + " (qualify it with a table name)");
 			}
 			found = i;
 		}
@@ -40,22 +37,22 @@ idx_t BindScope::Resolve(const ColumnRefExpression &ref) const {
 
 namespace {
 
-bool IsAggregateName(const std::string &name) {
+bool IsAggregateName(const std::string& name) {
 	const std::string lowered = Normalize(name);
 	return lowered == "count" || lowered == "sum" || lowered == "avg" || lowered == "min" || lowered == "max";
 }
 
-bool IsVectorDistanceName(const std::string &name) {
+bool IsVectorDistanceName(const std::string& name) {
 	const std::string lowered = Normalize(name);
-	return lowered == "l2_distance" || lowered == "array_distance" ||
-	       lowered == "cosine_distance" || lowered == "array_cosine_distance" ||
-	       lowered == "negative_inner_product" || lowered == "array_negative_inner_product";
+	return lowered == "l2_distance" || lowered == "array_distance" || lowered == "cosine_distance" ||
+		   lowered == "array_cosine_distance" || lowered == "negative_inner_product" ||
+		   lowered == "array_negative_inner_product";
 }
 
-bool ContainsAggregate(Expression &expression) {
+bool ContainsAggregate(Expression& expression) {
 	if (expression.type == ExpressionType::AGGREGATE_COUNT) {
 		// FunctionExpression stores AGGREGATE_COUNT as a placeholder type
-		auto &function = static_cast<FunctionExpression &>(expression);
+		auto& function = static_cast<FunctionExpression&>(expression);
 		if (IsAggregateName(function.name)) {
 			return true;
 		}
@@ -65,24 +62,24 @@ bool ContainsAggregate(Expression &expression) {
 		throw BinderException("Unknown function: " + function.name);
 	}
 	if (expression.type >= ExpressionType::COMPARE_EQUAL &&
-	    expression.type <= ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL) {
-		auto &comparison = static_cast<ComparisonExpression &>(expression);
+		expression.type <= ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL) {
+		auto& comparison = static_cast<ComparisonExpression&>(expression);
 		return ContainsAggregate(*comparison.left) || ContainsAggregate(*comparison.right);
 	}
 	if (expression.type == ExpressionType::CONJUNCTION_AND || expression.type == ExpressionType::CONJUNCTION_OR) {
-		auto &conjunction = static_cast<ConjunctionExpression &>(expression);
+		auto& conjunction = static_cast<ConjunctionExpression&>(expression);
 		return ContainsAggregate(*conjunction.left) || ContainsAggregate(*conjunction.right);
 	}
 	if (expression.type >= ExpressionType::OPERATOR_ADD && expression.type <= ExpressionType::OPERATOR_DIVIDE) {
-		auto &op = static_cast<OperatorExpression &>(expression);
+		auto& op = static_cast<OperatorExpression&>(expression);
 		return ContainsAggregate(*op.left) || ContainsAggregate(*op.right);
 	}
 	return false;
 }
 
-void SplitConjunction(Expression &expression, std::vector<Expression *> &conjuncts) {
+void SplitConjunction(Expression& expression, std::vector<Expression*>& conjuncts) {
 	if (expression.type == ExpressionType::CONJUNCTION_AND) {
-		auto &conjunction = static_cast<ConjunctionExpression &>(expression);
+		auto& conjunction = static_cast<ConjunctionExpression&>(expression);
 		SplitConjunction(*conjunction.left, conjuncts);
 		SplitConjunction(*conjunction.right, conjuncts);
 		return;
@@ -95,8 +92,7 @@ void SplitConjunction(Expression &expression, std::vector<Expression *> &conjunc
 //! LAB 5 - TASK #2: bind a scalar vector-distance function. This is where
 //! arity, VECTOR argument types, and equal dimensions are checked before any
 //! rows are scanned.
-std::unique_ptr<BoundExpression> Binder::BindVectorDistance(FunctionExpression &function,
-                                                            const BindScope &scope) {
+std::unique_ptr<BoundExpression> Binder::BindVectorDistance(FunctionExpression& function, const BindScope& scope) {
 	// TODO(L5.T2): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L5.T2 not implemented yet");
 }
@@ -123,7 +119,7 @@ std::unique_ptr<BoundExpression> Binder::BindVectorDistance(FunctionExpression &
 //! Tests: Lab2BinderTest.BindUnknownColumnThrows / BindAmbiguousColumnThrows /
 //!        BindQualifiedResolvesAmbiguity / BindArithmeticTypePromotion
 //! ----------------------------------------------------------------------------
-std::unique_ptr<BoundExpression> Binder::BindExpression(Expression &expression, const BindScope &scope) {
+std::unique_ptr<BoundExpression> Binder::BindExpression(Expression& expression, const BindScope& scope) {
 	// TODO(L2.T8): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T8 not implemented yet");
 }
@@ -142,8 +138,7 @@ std::unique_ptr<BoundExpression> Binder::BindExpression(Expression &expression, 
 //!
 //! Tests: Lab2BinderTest.BindAggregateTypes / BindAggregateRewrite
 //! ----------------------------------------------------------------------------
-std::unique_ptr<BoundAggregateExpression> Binder::BindAggregate(FunctionExpression &function,
-                                                                const BindScope &scope) {
+std::unique_ptr<BoundAggregateExpression> Binder::BindAggregate(FunctionExpression& function, const BindScope& scope) {
 	// TODO(L2.T8): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T8 not implemented yet");
 }
@@ -172,9 +167,8 @@ std::unique_ptr<BoundAggregateExpression> Binder::BindAggregate(FunctionExpressi
 //! Tests: Lab2BinderTest.BindAggregateRewrite / BindAggregateArithmeticRewrite
 //! ----------------------------------------------------------------------------
 std::unique_ptr<BoundExpression> Binder::RewriteAfterAggregate(
-    Expression &expression, const std::vector<Expression *> &group_asts,
-    const std::vector<LogicalType> &group_types,
-    std::vector<std::unique_ptr<BoundAggregateExpression>> &aggregates, const BindScope &scope) {
+	Expression& expression, const std::vector<Expression*>& group_asts, const std::vector<LogicalType>& group_types,
+	std::vector<std::unique_ptr<BoundAggregateExpression>>& aggregates, const BindScope& scope) {
 	// TODO(L2.T8): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T8 not implemented yet");
 }
@@ -203,18 +197,18 @@ std::unique_ptr<BoundExpression> Binder::RewriteAfterAggregate(
 //! Tests: Lab2BinderTest.BindSimpleSelect / BindStarExpands /
 //!        BindWhereProducesFilter / BindOrderAndLimit / BindMultipleGroupKeys
 //! ----------------------------------------------------------------------------
-std::unique_ptr<BoundStatement> Binder::BindSelect(SelectStatement &statement) {
+std::unique_ptr<BoundStatement> Binder::BindSelect(SelectStatement& statement) {
 	// TODO(L2.T8): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T8 not implemented yet");
 }
 
-std::unique_ptr<BoundStatement> Binder::BindCreateTable(CreateTableStatement &statement) {
+std::unique_ptr<BoundStatement> Binder::BindCreateTable(CreateTableStatement& statement) {
 	auto result = std::make_unique<BoundStatement>(StatementType::CREATE_TABLE_STATEMENT);
 	if (statement.columns.empty()) {
 		throw BinderException("CREATE TABLE requires at least one column");
 	}
 	std::set<std::string> seen;
-	for (const auto &column : statement.columns) {
+	for (const auto& column : statement.columns) {
 		if (!seen.insert(Normalize(column.name)).second) {
 			throw BinderException("Duplicate column name: " + column.name);
 		}
@@ -239,21 +233,21 @@ std::unique_ptr<BoundStatement> Binder::BindCreateTable(CreateTableStatement &st
 //!
 //! Tests: Lab2BinderTest.BindInsertCoercesTypes
 //! ----------------------------------------------------------------------------
-std::unique_ptr<BoundStatement> Binder::BindInsert(InsertStatement &statement) {
+std::unique_ptr<BoundStatement> Binder::BindInsert(InsertStatement& statement) {
 	auto result = std::make_unique<BoundStatement>(StatementType::INSERT_STATEMENT);
-	TableData &table = catalog_.GetTable(statement.table);
-	for (const auto &row : statement.rows) {
+	TableData& table = catalog_.GetTable(statement.table);
+	for (const auto& row : statement.rows) {
 		if (row.size() != table.ColumnCount()) {
 			throw BinderException("INSERT row has " + std::to_string(row.size()) + " values but table " +
-			                      statement.table + " has " + std::to_string(table.ColumnCount()) + " columns");
+								  statement.table + " has " + std::to_string(table.ColumnCount()) + " columns");
 		}
 		std::vector<Value> values;
 		for (idx_t col = 0; col < row.size(); col++) {
 			if (row[col]->type != ExpressionType::VALUE_CONSTANT) {
 				throw BinderException("INSERT only supports literal values");
 			}
-			const Value &value = static_cast<ConstantExpression &>(*row[col]).value;
-			const LogicalType &target = table.GetColumnTypes()[col];
+			const Value& value = static_cast<ConstantExpression&>(*row[col]).value;
+			const LogicalType& target = table.GetColumnTypes()[col];
 			if (value.IsNull()) {
 				values.push_back(Value::Null(target));
 				continue;
@@ -291,8 +285,8 @@ std::unique_ptr<BoundStatement> Binder::BindInsert(InsertStatement &statement) {
 				break;
 			case LogicalTypeId::VECTOR:
 				if (value.GetType() != target) {
-					throw BinderException("Cannot insert " + value.GetType().ToString() + " into " +
-					                      target.ToString() + " column");
+					throw BinderException("Cannot insert " + value.GetType().ToString() + " into " + target.ToString() +
+										  " column");
 				}
 				values.push_back(value);
 				break;
@@ -304,14 +298,14 @@ std::unique_ptr<BoundStatement> Binder::BindInsert(InsertStatement &statement) {
 	return result;
 }
 
-std::unique_ptr<BoundStatement> Binder::Bind(Statement &statement) {
+std::unique_ptr<BoundStatement> Binder::Bind(Statement& statement) {
 	switch (statement.type) {
 	case StatementType::SELECT_STATEMENT:
-		return BindSelect(static_cast<SelectStatement &>(statement));
+		return BindSelect(static_cast<SelectStatement&>(statement));
 	case StatementType::CREATE_TABLE_STATEMENT:
-		return BindCreateTable(static_cast<CreateTableStatement &>(statement));
+		return BindCreateTable(static_cast<CreateTableStatement&>(statement));
 	case StatementType::INSERT_STATEMENT:
-		return BindInsert(static_cast<InsertStatement &>(statement));
+		return BindInsert(static_cast<InsertStatement&>(statement));
 	}
 	throw BinderException("Unknown statement type");
 }

@@ -13,10 +13,10 @@ namespace tiny_duckdb {
 
 //! Hash/equality functors for vector<Value> keys (grouping semantics)
 struct VectorValueHash {
-	size_t operator()(const std::vector<Value> &key) const;
+	size_t operator()(const std::vector<Value>& key) const;
 };
 struct VectorValueEqual {
-	bool operator()(const std::vector<Value> &left, const std::vector<Value> &right) const;
+	bool operator()(const std::vector<Value>& left, const std::vector<Value>& right) const;
 };
 
 //! ============================================================================
@@ -34,11 +34,10 @@ struct VectorValueEqual {
 //! match list in the operator state and continues where it left off.
 //! ============================================================================
 class PhysicalHashJoin : public PhysicalOperator {
-public:
+  public:
 	PhysicalHashJoin(
-	    std::vector<std::pair<std::unique_ptr<BoundExpression>, std::unique_ptr<BoundExpression>>> conditions_p,
-	    std::vector<LogicalType> probe_types, std::vector<LogicalType> build_types,
-	    std::vector<std::string> names);
+		std::vector<std::pair<std::unique_ptr<BoundExpression>, std::unique_ptr<BoundExpression>>> conditions_p,
+		std::vector<LogicalType> probe_types, std::vector<LogicalType> build_types, std::vector<std::string> names);
 
 	//! One row of the build side, with its join key pre-extracted
 	struct BuildRow {
@@ -47,22 +46,22 @@ public:
 	};
 
 	// --- sink interface (build side) ---
-	std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext &context) override;
-	std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext &context, GlobalSinkState &gstate) override;
-	void Sink(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate, DataChunk &chunk) override;
-	void Combine(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate) override;
-	void Finalize(ExecutionContext &context, GlobalSinkState &gstate) override;
+	std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext& context) override;
+	std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext& context, GlobalSinkState& gstate) override;
+	void Sink(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate, DataChunk& chunk) override;
+	void Combine(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate) override;
+	void Finalize(ExecutionContext& context, GlobalSinkState& gstate) override;
 
 	// --- operator interface (probe side) ---
-	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context) override;
-	OperatorResultType Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
+	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext& context) override;
+	OperatorResultType Execute(ExecutionContext& context, DataChunk& chunk, OperatorState& state) override;
 
 	//! (probe-side expression, build-side expression)
 	std::vector<std::pair<std::unique_ptr<BoundExpression>, std::unique_ptr<BoundExpression>>> conditions;
 	std::vector<LogicalType> probe_types;
 	std::vector<LogicalType> build_types;
 
-private:
+  private:
 	std::vector<BuildRow> build_rows_;
 	std::unordered_map<std::vector<Value>, std::vector<idx_t>, VectorValueHash, VectorValueEqual> hash_table_;
 };

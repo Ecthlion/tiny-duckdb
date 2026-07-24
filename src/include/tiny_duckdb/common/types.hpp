@@ -29,7 +29,7 @@ enum class LogicalTypeId : uint8_t {
 //! Simplified logical type. VARCHAR and VECTOR are variable-size in our in-memory
 //! representation; VECTOR still has a fixed logical dimension.
 class LogicalType {
-public:
+  public:
 	LogicalType();
 	explicit LogicalType(LogicalTypeId id, idx_t vector_size = 0);
 
@@ -49,15 +49,15 @@ public:
 	static LogicalType Varchar();
 	static LogicalType Vector(idx_t size);
 
-	bool operator==(const LogicalType &rhs) const;
-	bool operator!=(const LogicalType &rhs) const;
+	bool operator==(const LogicalType& rhs) const;
+	bool operator!=(const LogicalType& rhs) const;
 
-private:
+  private:
 	LogicalTypeId id_;
 	idx_t vector_size_;
 };
 
-inline std::ostream &operator<<(std::ostream &os, const LogicalType &type) {
+inline std::ostream& operator<<(std::ostream& os, const LogicalType& type) {
 	os << type.ToString();
 	return os;
 }

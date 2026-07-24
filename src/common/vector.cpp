@@ -6,9 +6,7 @@
 
 namespace tiny_duckdb {
 
-ValidityMask::ValidityMask() {
-	Reset();
-}
+ValidityMask::ValidityMask() { Reset(); }
 
 void ValidityMask::Reset() {
 	for (idx_t word = 0; word < WORD_COUNT; word++) {
@@ -16,13 +14,9 @@ void ValidityMask::Reset() {
 	}
 }
 
-void ValidityMask::SetValid(idx_t index) {
-	words_[index / BITS_PER_WORD] |= (1ULL << (index % BITS_PER_WORD));
-}
+void ValidityMask::SetValid(idx_t index) { words_[index / BITS_PER_WORD] |= (1ULL << (index % BITS_PER_WORD)); }
 
-void ValidityMask::SetInvalid(idx_t index) {
-	words_[index / BITS_PER_WORD] &= ~(1ULL << (index % BITS_PER_WORD));
-}
+void ValidityMask::SetInvalid(idx_t index) { words_[index / BITS_PER_WORD] &= ~(1ULL << (index % BITS_PER_WORD)); }
 
 bool ValidityMask::IsValid(idx_t index) const {
 	return (words_[index / BITS_PER_WORD] >> (index % BITS_PER_WORD)) & 1ULL;
@@ -47,29 +41,17 @@ idx_t ValidityMask::CountValid(idx_t count) const {
 	return result;
 }
 
-SelectionVector::SelectionVector() {
-	data_.resize(STANDARD_VECTOR_SIZE);
-}
+SelectionVector::SelectionVector() { data_.resize(STANDARD_VECTOR_SIZE); }
 
-SelectionVector::SelectionVector(idx_t count) {
-	data_.resize(count);
-}
+SelectionVector::SelectionVector(idx_t count) { data_.resize(count); }
 
-void SelectionVector::set_index(idx_t position, idx_t index) {
-	data_[position] = static_cast<sel_t>(index);
-}
+void SelectionVector::set_index(idx_t position, idx_t index) { data_[position] = static_cast<sel_t>(index); }
 
-idx_t SelectionVector::get_index(idx_t position) const {
-	return data_[position];
-}
+idx_t SelectionVector::get_index(idx_t position) const { return data_[position]; }
 
-idx_t SelectionVector::size() const {
-	return data_.size();
-}
+idx_t SelectionVector::size() const { return data_.size(); }
 
-void SelectionVector::resize(idx_t count) {
-	data_.resize(count);
-}
+void SelectionVector::resize(idx_t count) { data_.resize(count); }
 
 std::vector<idx_t> SelectionVector::ToVector(idx_t count) const {
 	std::vector<idx_t> result;
@@ -80,7 +62,7 @@ std::vector<idx_t> SelectionVector::ToVector(idx_t count) const {
 	return result;
 }
 
-Vector::Vector(const LogicalType &type) : type_(type) {
+Vector::Vector(const LogicalType& type) : type_(type) {
 	const idx_t fixed_size = type_.FixedSize();
 	if (fixed_size > 0) {
 		data_ = std::make_unique<uint8_t[]>(fixed_size * STANDARD_VECTOR_SIZE);
@@ -92,28 +74,20 @@ Vector::Vector(const LogicalType &type) : type_(type) {
 	}
 }
 
-const LogicalType &Vector::GetType() const {
-	return type_;
-}
+const LogicalType& Vector::GetType() const { return type_; }
 
-ValidityMask &Vector::GetValidity() {
-	return validity_;
-}
+ValidityMask& Vector::GetValidity() { return validity_; }
 
-const ValidityMask &Vector::GetValidity() const {
-	return validity_;
-}
+const ValidityMask& Vector::GetValidity() const { return validity_; }
 
-uint8_t *Vector::GetData() {
-	return data_.get();
-}
+uint8_t* Vector::GetData() { return data_.get(); }
 
 void Vector::Reset() {
 	validity_.Reset();
-	for (auto &entry : string_heap_) {
+	for (auto& entry : string_heap_) {
 		entry.clear();
 	}
-	for (auto &entry : vector_heap_) {
+	for (auto& entry : vector_heap_) {
 		entry.clear();
 	}
 }
@@ -127,13 +101,13 @@ Value Vector::GetValue(idx_t index) const {
 	}
 	switch (type_.Id()) {
 	case LogicalTypeId::BOOLEAN:
-		return Value::Boolean(reinterpret_cast<const bool *>(data_.get())[index]);
+		return Value::Boolean(reinterpret_cast<const bool*>(data_.get())[index]);
 	case LogicalTypeId::INTEGER:
-		return Value::Integer(reinterpret_cast<const int32_t *>(data_.get())[index]);
+		return Value::Integer(reinterpret_cast<const int32_t*>(data_.get())[index]);
 	case LogicalTypeId::BIGINT:
-		return Value::BigInt(reinterpret_cast<const int64_t *>(data_.get())[index]);
+		return Value::BigInt(reinterpret_cast<const int64_t*>(data_.get())[index]);
 	case LogicalTypeId::DOUBLE:
-		return Value::Double(reinterpret_cast<const double *>(data_.get())[index]);
+		return Value::Double(reinterpret_cast<const double*>(data_.get())[index]);
 	case LogicalTypeId::VARCHAR:
 		return Value::Varchar(string_heap_[index]);
 	case LogicalTypeId::VECTOR:
@@ -142,13 +116,13 @@ Value Vector::GetValue(idx_t index) const {
 	throw StorageException("Unknown logical type in Vector::GetValue");
 }
 
-void Vector::SetValue(idx_t index, const Value &value) {
+void Vector::SetValue(idx_t index, const Value& value) {
 	if (index >= STANDARD_VECTOR_SIZE) {
 		throw StorageException("Vector::SetValue index out of range");
 	}
 	if (value.GetType() != type_) {
 		throw StorageException("Vector::SetValue type mismatch: vector is " + type_.ToString() + ", value is " +
-		                       value.GetType().ToString());
+							   value.GetType().ToString());
 	}
 	if (value.IsNull()) {
 		validity_.SetInvalid(index);

@@ -44,45 +44,43 @@ namespace tiny_duckdb {
 
 //! Per-thread filter state: the reusable selection vector
 class FilterState : public OperatorState {
-public:
+  public:
 	SelectionVector sel;
 };
 
 PhysicalFilter::PhysicalFilter(std::unique_ptr<BoundExpression> predicate_p, std::vector<LogicalType> types_p,
-                               std::vector<std::string> names_p)
-    : PhysicalOperator(PhysicalOperatorType::FILTER, std::move(types_p)), predicate(std::move(predicate_p)) {
+							   std::vector<std::string> names_p)
+	: PhysicalOperator(PhysicalOperatorType::FILTER, std::move(types_p)), predicate(std::move(predicate_p)) {
 	names = std::move(names_p);
 }
 
-std::unique_ptr<OperatorState> PhysicalFilter::GetOperatorState(ExecutionContext & /*context*/) {
+std::unique_ptr<OperatorState> PhysicalFilter::GetOperatorState(ExecutionContext& /*context*/) {
 	return std::make_unique<FilterState>();
 }
 
-OperatorResultType PhysicalFilter::Execute(ExecutionContext & /*context*/, DataChunk &chunk, OperatorState &state) {
+OperatorResultType PhysicalFilter::Execute(ExecutionContext& /*context*/, DataChunk& chunk, OperatorState& state) {
 	// TODO(L3.T2): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T2 not implemented yet");
 }
 
 class ProjectionState : public OperatorState {
-public:
+  public:
 	DataChunk output;
 };
 
 PhysicalProjection::PhysicalProjection(std::vector<std::unique_ptr<BoundExpression>> expressions_p,
-                                       std::vector<LogicalType> types_p, std::vector<std::string> names_p)
-    : PhysicalOperator(PhysicalOperatorType::PROJECTION, std::move(types_p)),
-      expressions(std::move(expressions_p)) {
+									   std::vector<LogicalType> types_p, std::vector<std::string> names_p)
+	: PhysicalOperator(PhysicalOperatorType::PROJECTION, std::move(types_p)), expressions(std::move(expressions_p)) {
 	names = std::move(names_p);
 }
 
-std::unique_ptr<OperatorState> PhysicalProjection::GetOperatorState(ExecutionContext & /*context*/) {
+std::unique_ptr<OperatorState> PhysicalProjection::GetOperatorState(ExecutionContext& /*context*/) {
 	auto result = std::make_unique<ProjectionState>();
 	result->output.Initialize(types);
 	return result;
 }
 
-OperatorResultType PhysicalProjection::Execute(ExecutionContext & /*context*/, DataChunk &chunk,
-                                               OperatorState &state) {
+OperatorResultType PhysicalProjection::Execute(ExecutionContext& /*context*/, DataChunk& chunk, OperatorState& state) {
 	// TODO(L3.T2): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T2 not implemented yet");
 }

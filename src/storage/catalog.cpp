@@ -7,15 +7,15 @@
 
 namespace tiny_duckdb {
 
-std::string Catalog::NormalizeName(const std::string &name) {
+std::string Catalog::NormalizeName(const std::string& name) {
 	std::string result = name;
 	std::transform(result.begin(), result.end(), result.begin(),
-	               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+				   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 	return result;
 }
 
-void Catalog::CreateTable(const std::string &name, const std::vector<std::string> &column_names,
-                          const std::vector<LogicalType> &column_types) {
+void Catalog::CreateTable(const std::string& name, const std::vector<std::string>& column_names,
+						  const std::vector<LogicalType>& column_types) {
 	std::lock_guard<std::mutex> guard(lock_);
 	const std::string key = NormalizeName(name);
 	if (tables_.count(key) != 0) {
@@ -23,13 +23,13 @@ void Catalog::CreateTable(const std::string &name, const std::vector<std::string
 	}
 	std::vector<std::string> normalized_columns;
 	normalized_columns.reserve(column_names.size());
-	for (const auto &column : column_names) {
+	for (const auto& column : column_names) {
 		normalized_columns.push_back(NormalizeName(column));
 	}
 	tables_[key] = std::make_unique<TableData>(key, normalized_columns, column_types);
 }
 
-TableData &Catalog::GetTable(const std::string &name) const {
+TableData& Catalog::GetTable(const std::string& name) const {
 	std::lock_guard<std::mutex> guard(lock_);
 	const auto entry = tables_.find(NormalizeName(name));
 	if (entry == tables_.end()) {
@@ -38,7 +38,7 @@ TableData &Catalog::GetTable(const std::string &name) const {
 	return *entry->second;
 }
 
-bool Catalog::TableExists(const std::string &name) const {
+bool Catalog::TableExists(const std::string& name) const {
 	std::lock_guard<std::mutex> guard(lock_);
 	return tables_.count(NormalizeName(name)) != 0;
 }
@@ -46,7 +46,7 @@ bool Catalog::TableExists(const std::string &name) const {
 std::vector<std::string> Catalog::ListTables() const {
 	std::lock_guard<std::mutex> guard(lock_);
 	std::vector<std::string> result;
-	for (const auto &entry : tables_) {
+	for (const auto& entry : tables_) {
 		result.push_back(entry.first);
 	}
 	return result;

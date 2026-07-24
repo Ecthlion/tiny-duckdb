@@ -4,8 +4,7 @@
 
 namespace tiny_duckdb {
 
-LogicalType::LogicalType() : id_(LogicalTypeId::INTEGER), vector_size_(0) {
-}
+LogicalType::LogicalType() : id_(LogicalTypeId::INTEGER), vector_size_(0) {}
 
 LogicalType::LogicalType(LogicalTypeId id, idx_t vector_size) : id_(id), vector_size_(vector_size) {
 	if (id_ == LogicalTypeId::VECTOR && vector_size_ == 0) {
@@ -13,9 +12,7 @@ LogicalType::LogicalType(LogicalTypeId id, idx_t vector_size) : id_(id), vector_
 	}
 }
 
-LogicalTypeId LogicalType::Id() const {
-	return id_;
-}
+LogicalTypeId LogicalType::Id() const { return id_; }
 
 idx_t LogicalType::VectorSize() const {
 	if (id_ != LogicalTypeId::VECTOR) {
@@ -45,9 +42,7 @@ bool LogicalType::IsNumeric() const {
 	return id_ == LogicalTypeId::INTEGER || id_ == LogicalTypeId::BIGINT || id_ == LogicalTypeId::DOUBLE;
 }
 
-bool LogicalType::IsIntegral() const {
-	return id_ == LogicalTypeId::INTEGER || id_ == LogicalTypeId::BIGINT;
-}
+bool LogicalType::IsIntegral() const { return id_ == LogicalTypeId::INTEGER || id_ == LogicalTypeId::BIGINT; }
 
 std::string LogicalType::ToString() const {
 	switch (id_) {
@@ -67,36 +62,22 @@ std::string LogicalType::ToString() const {
 	return "UNKNOWN";
 }
 
-LogicalType LogicalType::Boolean() {
-	return LogicalType(LogicalTypeId::BOOLEAN);
-}
+LogicalType LogicalType::Boolean() { return LogicalType(LogicalTypeId::BOOLEAN); }
 
-LogicalType LogicalType::Integer() {
-	return LogicalType(LogicalTypeId::INTEGER);
-}
+LogicalType LogicalType::Integer() { return LogicalType(LogicalTypeId::INTEGER); }
 
-LogicalType LogicalType::BigInt() {
-	return LogicalType(LogicalTypeId::BIGINT);
-}
+LogicalType LogicalType::BigInt() { return LogicalType(LogicalTypeId::BIGINT); }
 
-LogicalType LogicalType::Double() {
-	return LogicalType(LogicalTypeId::DOUBLE);
-}
+LogicalType LogicalType::Double() { return LogicalType(LogicalTypeId::DOUBLE); }
 
-LogicalType LogicalType::Varchar() {
-	return LogicalType(LogicalTypeId::VARCHAR);
-}
+LogicalType LogicalType::Varchar() { return LogicalType(LogicalTypeId::VARCHAR); }
 
-LogicalType LogicalType::Vector(idx_t size) {
-	return LogicalType(LogicalTypeId::VECTOR, size);
-}
+LogicalType LogicalType::Vector(idx_t size) { return LogicalType(LogicalTypeId::VECTOR, size); }
 
-bool LogicalType::operator==(const LogicalType &rhs) const {
+bool LogicalType::operator==(const LogicalType& rhs) const {
 	return id_ == rhs.id_ && (id_ != LogicalTypeId::VECTOR || vector_size_ == rhs.vector_size_);
 }
 
-bool LogicalType::operator!=(const LogicalType &rhs) const {
-	return !(*this == rhs);
-}
+bool LogicalType::operator!=(const LogicalType& rhs) const { return !(*this == rhs); }
 
 } // namespace tiny_duckdb

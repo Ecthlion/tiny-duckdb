@@ -11,11 +11,11 @@ namespace tiny_duckdb {
 //! decisions live: equi-joins become hash joins, and `column CMP constant`
 //! predicates under a scan are pushed down as zone-map table filters.
 class PhysicalPlanGenerator {
-public:
-	std::unique_ptr<PhysicalOperator> CreatePlan(LogicalOperator &op);
+  public:
+	std::unique_ptr<PhysicalOperator> CreatePlan(LogicalOperator& op);
 
-private:
-	std::unique_ptr<PhysicalOperator> CreatePlanInternal(LogicalOperator &op);
+  private:
+	std::unique_ptr<PhysicalOperator> CreatePlanInternal(LogicalOperator& op);
 };
 
 } // namespace tiny_duckdb

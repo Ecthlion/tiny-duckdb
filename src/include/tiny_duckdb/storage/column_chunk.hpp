@@ -67,26 +67,26 @@ namespace tiny_duckdb {
 //! Tests: Lab1StorageTest.ZoneMap* (7 tests, including boundary inclusivity)
 //! ============================================================================
 class ColumnChunk {
-public:
-	explicit ColumnChunk(const LogicalType &type);
+  public:
+	explicit ColumnChunk(const LogicalType& type);
 
-	const LogicalType &GetType() const;
+	const LogicalType& GetType() const;
 	idx_t Count() const;
 
 	//! Append count values from data[source_offset .. source_offset + count)
-	void Append(Vector &data, idx_t source_offset, idx_t count);
+	void Append(Vector& data, idx_t source_offset, idx_t count);
 	//! Read count values from [offset, offset + count) into out[out_offset ..]
-	void Scan(idx_t offset, idx_t count, Vector &out, idx_t out_offset) const;
+	void Scan(idx_t offset, idx_t count, Vector& out, idx_t out_offset) const;
 
 	//! Zone map support: min/max over all non-NULL values appended so far.
 	bool HasZoneMap() const;
-	const Value &Min() const;
-	const Value &Max() const;
+	const Value& Min() const;
+	const Value& Max() const;
 	//! Returns false if the zone map proves no row can satisfy `column OP constant`
-	bool CheckZoneMap(const Value &constant, ExpressionType comparison) const;
+	bool CheckZoneMap(const Value& constant, ExpressionType comparison) const;
 
-private:
-	void UpdateZoneMap(const Value &value);
+  private:
+	void UpdateZoneMap(const Value& value);
 
 	LogicalType type_;
 	std::vector<std::unique_ptr<Vector>> blocks_;

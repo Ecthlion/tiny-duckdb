@@ -22,28 +22,28 @@ namespace tiny_duckdb {
 //! aggregation parallel without contention.
 //! ============================================================================
 class PhysicalHashAggregate : public PhysicalOperator {
-public:
+  public:
 	PhysicalHashAggregate(std::vector<std::unique_ptr<BoundExpression>> groups_p,
-	                      std::vector<std::unique_ptr<BoundAggregateExpression>> aggregates_p,
-	                      std::vector<LogicalType> types, std::vector<std::string> names);
+						  std::vector<std::unique_ptr<BoundAggregateExpression>> aggregates_p,
+						  std::vector<LogicalType> types, std::vector<std::string> names);
 
 	// --- sink interface (build the hash table) ---
-	std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext &context) override;
-	std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext &context, GlobalSinkState &gstate) override;
-	void Sink(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate, DataChunk &chunk) override;
-	void Combine(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate) override;
-	void Finalize(ExecutionContext &context, GlobalSinkState &gstate) override;
+	std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext& context) override;
+	std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext& context, GlobalSinkState& gstate) override;
+	void Sink(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate, DataChunk& chunk) override;
+	void Combine(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate) override;
+	void Finalize(ExecutionContext& context, GlobalSinkState& gstate) override;
 
 	// --- source interface (emit result rows) ---
-	void GetData(ExecutionContext &context, DataChunk &chunk, SourceInput &input) override;
+	void GetData(ExecutionContext& context, DataChunk& chunk, SourceInput& input) override;
 
 	std::vector<std::unique_ptr<BoundExpression>> groups;
 	std::vector<std::unique_ptr<BoundAggregateExpression>> aggregates;
 
-private:
+  private:
 	//! Materialized result rows, filled by Finalize() and emitted by GetData()
 	std::vector<std::vector<Value>> result_rows_;
-	std::atomic<idx_t> emit_offset_ {0};
+	std::atomic<idx_t> emit_offset_{0};
 };
 
 } // namespace tiny_duckdb

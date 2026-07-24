@@ -18,27 +18,22 @@ namespace tiny_duckdb {
 // ---------------------------------------------------------------------------
 
 QueryResult::QueryResult(std::vector<std::string> names_p, std::vector<LogicalType> types_p)
-    : names_(std::move(names_p)), types_(std::move(types_p)) {
-}
+	: names_(std::move(names_p)), types_(std::move(types_p)) {}
 
-const std::vector<std::string> &QueryResult::Names() const {
-	return names_;
-}
+const std::vector<std::string>& QueryResult::Names() const { return names_; }
 
-const std::vector<LogicalType> &QueryResult::Types() const {
-	return types_;
-}
+const std::vector<LogicalType>& QueryResult::Types() const { return types_; }
 
 idx_t QueryResult::RowCount() const {
 	idx_t count = 0;
-	for (const auto &chunk : chunks_) {
+	for (const auto& chunk : chunks_) {
 		count += chunk->size();
 	}
 	return count;
 }
 
 Value QueryResult::GetValue(idx_t column, idx_t row) const {
-	for (const auto &chunk : chunks_) {
+	for (const auto& chunk : chunks_) {
 		if (row < chunk->size()) {
 			return chunk->GetValue(column, row);
 		}
@@ -49,7 +44,7 @@ Value QueryResult::GetValue(idx_t column, idx_t row) const {
 
 std::vector<std::vector<Value>> QueryResult::ToRows() const {
 	std::vector<std::vector<Value>> rows;
-	for (const auto &chunk : chunks_) {
+	for (const auto& chunk : chunks_) {
 		for (idx_t row = 0; row < chunk->size(); row++) {
 			std::vector<Value> values;
 			for (idx_t col = 0; col < chunk->ColumnCount(); col++) {
@@ -67,7 +62,7 @@ std::string QueryResult::ToString() const {
 	for (idx_t col = 0; col < names_.size(); col++) {
 		widths[col] = names_[col].size();
 	}
-	for (const auto &row : rows) {
+	for (const auto& row : rows) {
 		for (idx_t col = 0; col < row.size(); col++) {
 			widths[col] = std::max(widths[col], static_cast<idx_t>(row[col].ToString().size()));
 		}
@@ -81,10 +76,10 @@ std::string QueryResult::ToString() const {
 		out << "|-" << std::string(widths[col], '-') << '-';
 	}
 	out << "|\n";
-	for (const auto &row : rows) {
+	for (const auto& row : rows) {
 		for (idx_t col = 0; col < row.size(); col++) {
 			out << (col == 0 ? "| " : " | ") << std::left << std::setw(static_cast<int>(widths[col]))
-			    << row[col].ToString();
+				<< row[col].ToString();
 		}
 		out << " |\n";
 	}
@@ -92,36 +87,27 @@ std::string QueryResult::ToString() const {
 	return out.str();
 }
 
-void QueryResult::AddChunk(std::unique_ptr<DataChunk> chunk) {
-	chunks_.push_back(std::move(chunk));
-}
+void QueryResult::AddChunk(std::unique_ptr<DataChunk> chunk) { chunks_.push_back(std::move(chunk)); }
 
 // ---------------------------------------------------------------------------
 // TinyDuckDB
 // ---------------------------------------------------------------------------
 
-Catalog &TinyDuckDB::GetCatalog() {
-	return catalog_;
-}
+Catalog& TinyDuckDB::GetCatalog() { return catalog_; }
 
-void TinyDuckDB::SetThreads(idx_t threads) {
-	threads_ = std::max<idx_t>(threads, 1);
-}
+void TinyDuckDB::SetThreads(idx_t threads) { threads_ = std::max<idx_t>(threads, 1); }
 
-idx_t TinyDuckDB::GetThreads() const {
-	return threads_.load();
-}
+idx_t TinyDuckDB::GetThreads() const { return threads_.load(); }
 
 // ---------------------------------------------------------------------------
 // Connection
 // ---------------------------------------------------------------------------
 
-Connection::Connection(TinyDuckDB &db) : db_(db) {
-}
+Connection::Connection(TinyDuckDB& db) : db_(db) {}
 
 static std::unique_ptr<QueryResult> OkResult() {
-	auto result = std::make_unique<QueryResult>(std::vector<std::string> {"ok"},
-	                                       std::vector<LogicalType> {LogicalType::Varchar()});
+	auto result =
+		std::make_unique<QueryResult>(std::vector<std::string>{"ok"}, std::vector<LogicalType>{LogicalType::Varchar()});
 	auto chunk = std::make_unique<DataChunk>();
 	chunk->Initialize({LogicalType::Varchar()});
 	chunk->AppendRow({Value::Varchar("OK")});
@@ -129,7 +115,7 @@ static std::unique_ptr<QueryResult> OkResult() {
 	return result;
 }
 
-std::unique_ptr<QueryResult> Connection::Query(const std::string &sql) {
+std::unique_ptr<QueryResult> Connection::Query(const std::string& sql) {
 	SqlParser parser;
 	auto statement = parser.Parse(sql);
 	Binder binder(db_.GetCatalog());
@@ -138,7 +124,7 @@ std::unique_ptr<QueryResult> Connection::Query(const std::string &sql) {
 	case StatementType::CREATE_TABLE_STATEMENT: {
 		std::vector<std::string> names;
 		std::vector<LogicalType> types;
-		for (const auto &column : bound->columns) {
+		for (const auto& column : bound->columns) {
 			names.push_back(column.name);
 			types.push_back(column.type);
 		}
@@ -148,7 +134,7 @@ std::unique_ptr<QueryResult> Connection::Query(const std::string &sql) {
 	case StatementType::INSERT_STATEMENT: {
 		DataChunk chunk;
 		chunk.Initialize(bound->insert_table->GetColumnTypes());
-		for (const auto &row : bound->rows) {
+		for (const auto& row : bound->rows) {
 			chunk.AppendRow(row);
 			if (chunk.size() == STANDARD_VECTOR_SIZE) {
 				bound->insert_table->Append(chunk);

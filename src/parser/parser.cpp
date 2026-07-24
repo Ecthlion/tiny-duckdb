@@ -5,17 +5,14 @@
 
 namespace tiny_duckdb {
 
-SqlParser::SqlParser() : parser_(TinyDuckDBSqlGrammar()) {
-}
+SqlParser::SqlParser() : parser_(TinyDuckDBSqlGrammar()) {}
 
-std::unique_ptr<Statement> SqlParser::Parse(const std::string &sql) const {
+std::unique_ptr<Statement> SqlParser::Parse(const std::string& sql) const {
 	auto tree = parser_.Parse(sql);
 	Transformer transformer;
 	return transformer.TransformStatement(*tree);
 }
 
-std::unique_ptr<peg::Ast> SqlParser::ParseTree(const std::string &sql) const {
-	return parser_.Parse(sql);
-}
+std::unique_ptr<peg::Ast> SqlParser::ParseTree(const std::string& sql) const { return parser_.Parse(sql); }
 
 } // namespace tiny_duckdb

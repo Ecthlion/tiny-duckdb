@@ -19,6 +19,6 @@ namespace tiny_duckdb {
 //! Task L2.T4: ORDER BY / LIMIT
 //! (CREATE TABLE / INSERT are provided so the database is usable end-to-end.)
 //! ============================================================================
-const char *TinyDuckDBSqlGrammar();
+const char* TinyDuckDBSqlGrammar();
 
 } // namespace tiny_duckdb

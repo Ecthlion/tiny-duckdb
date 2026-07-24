@@ -33,21 +33,18 @@ namespace tiny_duckdb {
 //!        4-thread exactly-once stress test over 10000 morsels)
 //! ============================================================================
 class MorselQueue {
-public:
-	explicit MorselQueue(idx_t total_morsels) : total_(total_morsels), next_(0) {
-	}
+  public:
+	explicit MorselQueue(idx_t total_morsels) : total_(total_morsels), next_(0) {}
 
 	//! Grab the next morsel. Returns false when all morsels are taken.
-	bool NextMorsel(idx_t &morsel_id) {
+	bool NextMorsel(idx_t& morsel_id) {
 		// TODO(L0.T1): implement this (see the corresponding docs/labN.md)
 		throw NotImplementedException("task L0.T1 not implemented yet");
 	}
 
-	idx_t TotalMorsels() const {
-		return total_;
-	}
+	idx_t TotalMorsels() const { return total_; }
 
-private:
+  private:
 	idx_t total_;
 	std::atomic<idx_t> next_;
 };

@@ -20,43 +20,43 @@ namespace tiny_duckdb {
 
 //! Sinks all rows, stable-sorts them in Finalize, emits them in GetData.
 class PhysicalOrderBy : public PhysicalOperator {
-public:
+  public:
 	PhysicalOrderBy(std::vector<std::pair<idx_t, bool>> keys_p, std::vector<LogicalType> types_p,
-	                std::vector<std::string> names_p);
+					std::vector<std::string> names_p);
 
-	std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext &context) override;
-	std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext &context, GlobalSinkState &gstate) override;
-	void Sink(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate, DataChunk &chunk) override;
-	void Combine(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate) override;
-	void Finalize(ExecutionContext &context, GlobalSinkState &gstate) override;
+	std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext& context) override;
+	std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext& context, GlobalSinkState& gstate) override;
+	void Sink(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate, DataChunk& chunk) override;
+	void Combine(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate) override;
+	void Finalize(ExecutionContext& context, GlobalSinkState& gstate) override;
 
-	void GetData(ExecutionContext &context, DataChunk &chunk, SourceInput &input) override;
+	void GetData(ExecutionContext& context, DataChunk& chunk, SourceInput& input) override;
 
 	std::vector<std::pair<idx_t, bool>> keys;
 
-private:
+  private:
 	std::vector<std::vector<Value>> result_rows_;
-	std::atomic<idx_t> emit_offset_ {0};
+	std::atomic<idx_t> emit_offset_{0};
 };
 
 //! Sinks rows until the limit is reached, then emits them.
 class PhysicalLimit : public PhysicalOperator {
-public:
+  public:
 	PhysicalLimit(int64_t limit_p, std::vector<LogicalType> types_p, std::vector<std::string> names_p);
 
-	std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext &context) override;
-	std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext &context, GlobalSinkState &gstate) override;
-	void Sink(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate, DataChunk &chunk) override;
-	void Combine(ExecutionContext &context, GlobalSinkState &gstate, LocalSinkState &lstate) override;
-	void Finalize(ExecutionContext &context, GlobalSinkState &gstate) override;
+	std::unique_ptr<GlobalSinkState> GetGlobalSinkState(ExecutionContext& context) override;
+	std::unique_ptr<LocalSinkState> GetLocalSinkState(ExecutionContext& context, GlobalSinkState& gstate) override;
+	void Sink(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate, DataChunk& chunk) override;
+	void Combine(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate) override;
+	void Finalize(ExecutionContext& context, GlobalSinkState& gstate) override;
 
-	void GetData(ExecutionContext &context, DataChunk &chunk, SourceInput &input) override;
+	void GetData(ExecutionContext& context, DataChunk& chunk, SourceInput& input) override;
 
 	int64_t limit;
 
-private:
+  private:
 	std::vector<std::vector<Value>> result_rows_;
-	std::atomic<idx_t> emit_offset_ {0};
+	std::atomic<idx_t> emit_offset_{0};
 };
 
 } // namespace tiny_duckdb

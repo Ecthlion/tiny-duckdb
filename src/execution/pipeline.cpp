@@ -10,7 +10,7 @@
 
 namespace tiny_duckdb {
 
-void Pipeline::Execute(TinyDuckDB &db, idx_t thread_count) {
+void Pipeline::Execute(TinyDuckDB& db, idx_t thread_count) {
 	if (!source) {
 		throw ExecutorException("pipeline without a source");
 	}
@@ -44,7 +44,7 @@ void Pipeline::Execute(TinyDuckDB &db, idx_t thread_count) {
 	} catch (...) {
 		main_error = std::current_exception();
 	}
-	for (auto &worker : workers) {
+	for (auto& worker : workers) {
 		worker.join();
 	}
 	if (main_error) {
@@ -58,11 +58,11 @@ void Pipeline::Execute(TinyDuckDB &db, idx_t thread_count) {
 	}
 }
 
-void Pipeline::ExecuteWorker(ExecutionContext &context, GlobalSourceState *global_source,
-                             GlobalSinkState *global_sink) {
+void Pipeline::ExecuteWorker(ExecutionContext& context, GlobalSourceState* global_source,
+							 GlobalSinkState* global_sink) {
 	auto source_state = source->GetOperatorState(context);
 	std::vector<std::unique_ptr<OperatorState>> operator_states;
-	for (const auto &op : operators) {
+	for (const auto& op : operators) {
 		operator_states.push_back(op->GetOperatorState(context));
 	}
 	std::unique_ptr<LocalSinkState> local_sink;
@@ -74,7 +74,7 @@ void Pipeline::ExecuteWorker(ExecutionContext &context, GlobalSourceState *globa
 		// re-initialize every iteration: operators (projection/join) replace
 		// the chunk's schema as it flows through the pipeline
 		chunk.Initialize(source->types);
-		SourceInput input {*source_state, global_source};
+		SourceInput input{*source_state, global_source};
 		source->GetData(context, chunk, input);
 		if (chunk.size() == 0) {
 			break;
@@ -112,14 +112,14 @@ void Pipeline::ExecuteWorker(ExecutionContext &context, GlobalSourceState *globa
 // PipelineBuilder
 // ---------------------------------------------------------------------------
 
-std::vector<std::unique_ptr<Pipeline>> PipelineBuilder::Build(PhysicalOperator &root) {
+std::vector<std::unique_ptr<Pipeline>> PipelineBuilder::Build(PhysicalOperator& root) {
 	auto current = std::make_unique<Pipeline>();
 	BuildRecursive(root, *current);
 	pipelines_.push_back(std::move(current));
 	return std::move(pipelines_);
 }
 
-void PipelineBuilder::BuildRecursive(PhysicalOperator &op, Pipeline &current) {
+void PipelineBuilder::BuildRecursive(PhysicalOperator& op, Pipeline& current) {
 	switch (op.type) {
 	case PhysicalOperatorType::RESULT_COLLECTOR:
 		current.sink = &op;

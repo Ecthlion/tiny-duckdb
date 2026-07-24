@@ -82,17 +82,17 @@ struct AggregateState {
 	double sum = 0.0;
 	Value value; // min/max candidate
 
-	void Update(const Value &input) {
+	void Update(const Value& input) {
 		// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
 		throw NotImplementedException("task L3.T4 not implemented yet");
 	}
 
-	void Merge(const AggregateState &other) {
+	void Merge(const AggregateState& other) {
 		// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
 		throw NotImplementedException("task L3.T4 not implemented yet");
 	}
 
-	Value Finalize(const LogicalType &return_type) const {
+	Value Finalize(const LogicalType& return_type) const {
 		// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
 		throw NotImplementedException("task L3.T4 not implemented yet");
 	}
@@ -103,9 +103,9 @@ struct AggregateState {
 //! (provided - read this before writing Task L3.T4b)
 //! ---------------------------------------------------------------------------
 struct GroupKeyHash {
-	size_t operator()(const std::vector<Value> &key) const {
+	size_t operator()(const std::vector<Value>& key) const {
 		uint64_t hash = 0;
-		for (const auto &value : key) {
+		for (const auto& value : key) {
 			hash = hash * 31 + value.Hash();
 		}
 		return static_cast<size_t>(hash);
@@ -113,7 +113,7 @@ struct GroupKeyHash {
 };
 
 struct GroupKeyEqual {
-	bool operator()(const std::vector<Value> &left, const std::vector<Value> &right) const {
+	bool operator()(const std::vector<Value>& left, const std::vector<Value>& right) const {
 		if (left.size() != right.size()) {
 			return false;
 		}
@@ -127,8 +127,8 @@ struct GroupKeyEqual {
 };
 
 class GroupByHashTable {
-public:
-	std::vector<AggregateState> &FindOrCreate(const std::vector<Value> &key) {
+  public:
+	std::vector<AggregateState>& FindOrCreate(const std::vector<Value>& key) {
 		auto entry = index_.find(key);
 		if (entry != index_.end()) {
 			return states_[entry->second];
@@ -143,18 +143,14 @@ public:
 		return states_[group_index];
 	}
 
-	void SetAggregateTypes(const std::vector<ExpressionType> &types) {
-		aggregate_types_ = types;
-	}
+	void SetAggregateTypes(const std::vector<ExpressionType>& types) { aggregate_types_ = types; }
 
-	bool Empty() const {
-		return keys_.empty();
-	}
+	bool Empty() const { return keys_.empty(); }
 
 	std::vector<std::vector<Value>> keys_;
 	std::vector<std::vector<AggregateState>> states_;
 
-private:
+  private:
 	std::vector<ExpressionType> aggregate_types_;
 	std::unordered_map<std::vector<Value>, idx_t, GroupKeyHash, GroupKeyEqual> index_;
 };
@@ -162,63 +158,62 @@ private:
 } // namespace
 
 class HashAggregateGlobalSinkState : public GlobalSinkState {
-public:
+  public:
 	GroupByHashTable table;
 	std::mutex lock;
 };
 
 class HashAggregateLocalSinkState : public LocalSinkState {
-public:
+  public:
 	GroupByHashTable table;
 };
 
-PhysicalHashAggregate::PhysicalHashAggregate(
-    std::vector<std::unique_ptr<BoundExpression>> groups_p,
-    std::vector<std::unique_ptr<BoundAggregateExpression>> aggregates_p, std::vector<LogicalType> types_p,
-    std::vector<std::string> names_p)
-    : PhysicalOperator(PhysicalOperatorType::HASH_GROUP_BY, std::move(types_p)), groups(std::move(groups_p)),
-      aggregates(std::move(aggregates_p)) {
+PhysicalHashAggregate::PhysicalHashAggregate(std::vector<std::unique_ptr<BoundExpression>> groups_p,
+											 std::vector<std::unique_ptr<BoundAggregateExpression>> aggregates_p,
+											 std::vector<LogicalType> types_p, std::vector<std::string> names_p)
+	: PhysicalOperator(PhysicalOperatorType::HASH_GROUP_BY, std::move(types_p)), groups(std::move(groups_p)),
+	  aggregates(std::move(aggregates_p)) {
 	names = std::move(names_p);
 }
 
-std::unique_ptr<GlobalSinkState> PhysicalHashAggregate::GetGlobalSinkState(ExecutionContext & /*context*/) {
+std::unique_ptr<GlobalSinkState> PhysicalHashAggregate::GetGlobalSinkState(ExecutionContext& /*context*/) {
 	auto result = std::make_unique<HashAggregateGlobalSinkState>();
 	std::vector<ExpressionType> aggregate_types;
-	for (const auto &agg : aggregates) {
+	for (const auto& agg : aggregates) {
 		aggregate_types.push_back(agg->type);
 	}
 	result->table.SetAggregateTypes(aggregate_types);
 	return result;
 }
 
-std::unique_ptr<LocalSinkState> PhysicalHashAggregate::GetLocalSinkState(ExecutionContext & /*context*/,
-                                                                         GlobalSinkState & /*gstate*/) {
+std::unique_ptr<LocalSinkState> PhysicalHashAggregate::GetLocalSinkState(ExecutionContext& /*context*/,
+																		 GlobalSinkState& /*gstate*/) {
 	auto result = std::make_unique<HashAggregateLocalSinkState>();
 	std::vector<ExpressionType> aggregate_types;
-	for (const auto &agg : aggregates) {
+	for (const auto& agg : aggregates) {
 		aggregate_types.push_back(agg->type);
 	}
 	result->table.SetAggregateTypes(aggregate_types);
 	return result;
 }
 
-void PhysicalHashAggregate::Sink(ExecutionContext & /*context*/, GlobalSinkState & /*gstate*/, LocalSinkState &lstate,
-                                 DataChunk &chunk) {
+void PhysicalHashAggregate::Sink(ExecutionContext& /*context*/, GlobalSinkState& /*gstate*/, LocalSinkState& lstate,
+								 DataChunk& chunk) {
 	// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T4 not implemented yet");
 }
 
-void PhysicalHashAggregate::Combine(ExecutionContext & /*context*/, GlobalSinkState &gstate, LocalSinkState &lstate) {
+void PhysicalHashAggregate::Combine(ExecutionContext& /*context*/, GlobalSinkState& gstate, LocalSinkState& lstate) {
 	// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T4 not implemented yet");
 }
 
-void PhysicalHashAggregate::Finalize(ExecutionContext & /*context*/, GlobalSinkState &gstate) {
+void PhysicalHashAggregate::Finalize(ExecutionContext& /*context*/, GlobalSinkState& gstate) {
 	// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T4 not implemented yet");
 }
 
-void PhysicalHashAggregate::GetData(ExecutionContext & /*context*/, DataChunk &chunk, SourceInput & /*input*/) {
+void PhysicalHashAggregate::GetData(ExecutionContext& /*context*/, DataChunk& chunk, SourceInput& /*input*/) {
 	// TODO(L3.T4): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L3.T4 not implemented yet");
 }

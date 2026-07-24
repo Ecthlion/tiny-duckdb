@@ -10,16 +10,16 @@ namespace tiny_duckdb {
 
 //! The SQL parser: PEG grammar + transformer. Compiles the grammar once.
 class SqlParser {
-public:
+  public:
 	SqlParser();
 
 	//! Parse one SQL statement. Throws ParserException on syntax errors.
-	std::unique_ptr<Statement> Parse(const std::string &sql) const;
+	std::unique_ptr<Statement> Parse(const std::string& sql) const;
 
 	//! Expose the raw PEG parse tree (used by the Lab 2 tests)
-	std::unique_ptr<peg::Ast> ParseTree(const std::string &sql) const;
+	std::unique_ptr<peg::Ast> ParseTree(const std::string& sql) const;
 
-private:
+  private:
 	peg::Parser parser_;
 };
 

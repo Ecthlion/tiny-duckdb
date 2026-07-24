@@ -15,12 +15,12 @@ namespace tiny_duckdb {
 //! OPERATOR. Execute() evaluates the predicate and compacts the chunk in
 //! place using DataChunk::Slice.
 class PhysicalFilter : public PhysicalOperator {
-public:
+  public:
 	PhysicalFilter(std::unique_ptr<BoundExpression> predicate_p, std::vector<LogicalType> types,
-	               std::vector<std::string> names);
+				   std::vector<std::string> names);
 
-	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context) override;
-	OperatorResultType Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
+	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext& context) override;
+	OperatorResultType Execute(ExecutionContext& context, DataChunk& chunk, OperatorState& state) override;
 
 	std::unique_ptr<BoundExpression> predicate;
 };
@@ -28,12 +28,12 @@ public:
 //! OPERATOR. Execute() evaluates one expression per output column and
 //! replaces the chunk with the result.
 class PhysicalProjection : public PhysicalOperator {
-public:
-	PhysicalProjection(std::vector<std::unique_ptr<BoundExpression>> expressions_p,
-	                   std::vector<LogicalType> types, std::vector<std::string> names);
+  public:
+	PhysicalProjection(std::vector<std::unique_ptr<BoundExpression>> expressions_p, std::vector<LogicalType> types,
+					   std::vector<std::string> names);
 
-	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context) override;
-	OperatorResultType Execute(ExecutionContext &context, DataChunk &chunk, OperatorState &state) override;
+	std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext& context) override;
+	OperatorResultType Execute(ExecutionContext& context, DataChunk& chunk, OperatorState& state) override;
 
 	std::vector<std::unique_ptr<BoundExpression>> expressions;
 };

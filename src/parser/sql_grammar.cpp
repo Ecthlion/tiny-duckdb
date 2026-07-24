@@ -31,7 +31,7 @@ namespace tiny_duckdb {
 //!
 //! Tests: test/lab2_parser_test.cpp (all Lab2ParserTest.* tests)
 //! ============================================================================
-const char *TinyDuckDBSqlGrammar() {
+const char* TinyDuckDBSqlGrammar() {
 	// TODO(L2.T1-T4): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L2.T1-T4 not implemented yet");
 }
