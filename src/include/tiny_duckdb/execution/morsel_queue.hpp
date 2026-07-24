@@ -38,8 +38,12 @@ class MorselQueue {
 
 	//! Grab the next morsel. Returns false when all morsels are taken.
 	bool NextMorsel(idx_t& morsel_id) {
-		// TODO(L0.T1): implement this (see the corresponding docs/labN.md)
-		throw NotImplementedException("task L0.T1 not implemented yet");
+		idx_t id = next_.fetch_add(1, std::memory_order_relaxed);
+		if (id >= total_) {
+			return false;
+		}
+		morsel_id = id;
+		return true;
 	}
 
 	idx_t TotalMorsels() const { return total_; }
