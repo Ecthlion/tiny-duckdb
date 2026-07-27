@@ -1,3 +1,4 @@
+#include <atomic>
 #include <thread>
 #include <vector>
 
@@ -255,4 +256,56 @@ TEST(Lab1StorageTest, EmptyTableHasNoMorsels) {
 	auto state = table->CreateParallelScanState();
 	TableScanMorsel morsel;
 	EXPECT_FALSE(state->NextMorsel(morsel));
+}
+
+TEST(Lab1StorageTest, ConcurrentTableAppendsAreAtomic) {
+	constexpr idx_t THREADS = 4;
+	constexpr idx_t ROWS_PER_THREAD = 3000;
+	TableData table("t", {"a"}, {LogicalType::Integer()});
+	std::atomic<bool> append_failed{false};
+	std::vector<std::thread> threads;
+	for (idx_t thread_id = 0; thread_id < THREADS; thread_id++) {
+		threads.emplace_back([&table, &append_failed, thread_id] {
+			try {
+				DataChunk chunk;
+				chunk.Initialize({LogicalType::Integer()});
+				for (idx_t row = 0; row < ROWS_PER_THREAD; row++) {
+					const idx_t value = thread_id * ROWS_PER_THREAD + row;
+					chunk.AppendRow({Value::Integer(static_cast<int32_t>(value))});
+					if (chunk.size() == STANDARD_VECTOR_SIZE) {
+						table.Append(chunk);
+						chunk.Reset();
+					}
+				}
+				if (chunk.size() > 0) {
+					table.Append(chunk);
+				}
+			} catch (...) {
+				append_failed.store(true);
+			}
+		});
+	}
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	EXPECT_FALSE(append_failed.load());
+	EXPECT_EQ(table.RowCount(), THREADS * ROWS_PER_THREAD);
+
+	std::vector<bool> seen(THREADS * ROWS_PER_THREAD, false);
+	auto scan_state = table.CreateParallelScanState();
+	TableScanMorsel morsel;
+	while (scan_state->NextMorsel(morsel)) {
+		DataChunk out;
+		out.Initialize({LogicalType::Integer()});
+		table.Scan(morsel, {0}, out);
+		for (idx_t row = 0; row < out.size(); row++) {
+			const auto value = static_cast<idx_t>(out.GetValue(0, row).GetInteger());
+			EXPECT_TRUE(value < seen.size());
+			EXPECT_FALSE(seen[value]);
+			seen[value] = true;
+		}
+	}
+	for (bool value_seen : seen) {
+		EXPECT_TRUE(value_seen);
+	}
 }

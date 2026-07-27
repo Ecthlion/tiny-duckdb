@@ -28,7 +28,7 @@ namespace tiny_duckdb {
 //! read them to learn the matching style before writing your own.
 //! ============================================================================
 
-static std::string Lowercase(std::string text) {
+[[maybe_unused]] static std::string Lowercase(std::string text) {
 	std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return std::tolower(c); });
 	return text;
 }

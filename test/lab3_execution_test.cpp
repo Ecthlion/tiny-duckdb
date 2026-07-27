@@ -78,6 +78,23 @@ void CreateOrdersAndCustomer(TinyDuckDB& db) {
 	Exec(db, "INSERT INTO orders VALUES (10, 1), (11, 1), (12, 2), (13, 3)");
 }
 
+void CreateDescendingIntegers(TinyDuckDB& db, idx_t rows) {
+	Exec(db, "CREATE TABLE sort_input (a INTEGER)");
+	auto& table = db.GetCatalog().GetTable("sort_input");
+	DataChunk chunk;
+	chunk.Initialize(table.GetColumnTypes());
+	for (idx_t i = 0; i < rows; i++) {
+		chunk.AppendRow({Value::Integer(static_cast<int32_t>(rows - i))});
+		if (chunk.size() == STANDARD_VECTOR_SIZE) {
+			table.Append(chunk);
+			chunk.Reset();
+		}
+	}
+	if (chunk.size() > 0) {
+		table.Append(chunk);
+	}
+}
+
 } // namespace
 
 // --- L3.T1: the expression executor ----------------------------------------
@@ -524,4 +541,27 @@ TEST(Lab3ExecutionTest, LimitZeroAndBeyondTotal) {
 	EXPECT_EQ(zero->RowCount(), 0);
 	auto beyond = Run(db, "SELECT * FROM t LIMIT 100");
 	EXPECT_EQ(beyond->RowCount(), 3);
+}
+
+TEST(Lab3ExecutionTest, OrderByPreservesOrderAcrossChunks) {
+	TinyDuckDB db;
+	db.SetThreads(4);
+	constexpr idx_t ROWS = STANDARD_VECTOR_SIZE * 4 + 17;
+	CreateDescendingIntegers(db, ROWS);
+	auto result = Run(db, "SELECT a FROM sort_input ORDER BY a");
+	ASSERT_EQ(result->RowCount(), ROWS);
+	for (idx_t row = 0; row < ROWS; row++) {
+		EXPECT_EQ(result->GetValue(0, row), Value::Integer(static_cast<int32_t>(row + 1)));
+	}
+}
+
+TEST(Lab3ExecutionTest, OrderByLimitUsesGlobalOrderAcrossChunks) {
+	TinyDuckDB db;
+	db.SetThreads(4);
+	CreateDescendingIntegers(db, STANDARD_VECTOR_SIZE * 4 + 17);
+	auto result = Run(db, "SELECT a FROM sort_input ORDER BY a LIMIT 10");
+	ASSERT_EQ(result->RowCount(), 10);
+	for (idx_t row = 0; row < 10; row++) {
+		EXPECT_EQ(result->GetValue(0, row), Value::Integer(static_cast<int32_t>(row + 1)));
+	}
 }

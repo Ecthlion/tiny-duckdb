@@ -15,7 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install clang-format (ubuntu)
+      - name: Read repository edition
+        id: edition
+        shell: bash
+        run: echo "name=$(tr -d '[:space:]' < .tiny-duckdb-edition)" >> "$GITHUB_OUTPUT"
+
+      - name: Install clang-format (Ubuntu)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -23,25 +28,47 @@ jobs:
 
       - name: Install clang-format (macOS)
         if: runner.os == 'macOS'
-        run: |
-          brew list clang-format >/dev/null 2>&1 || brew install clang-format
+        run: brew list clang-format >/dev/null 2>&1 || brew install clang-format
 
-      - name: clang-format check
+      - name: Check formatting
         run: make format-check
 
-      - name: build
-        run: make -j2
+      - name: Configure Debug build
+        run: cmake -S . -B cmake-build -DCMAKE_BUILD_TYPE=Debug
 
-      - name: test (answer only)
-        if: github.ref_name == 'answer' || github.head_ref == 'answer'
-        run: make test
+      - name: Build
+        run: cmake --build cmake-build -j2
 
-      - name: lab4 pytest (answer + ubuntu only)
-        if: (github.ref_name == 'answer' || github.head_ref == 'answer') && runner.os == 'Linux'
+      - name: Check student edition does not contain solutions
+        if: steps.edition.outputs.name == 'student'
+        shell: bash
+        run: |
+          if grep -R -n '\[SOLUTION BEGIN\|\[SOLUTION END\]' src lab4_lakebase; then
+            echo "student edition contains solution markers"
+            exit 1
+          fi
+
+      - name: Test answer edition
+        if: steps.edition.outputs.name == 'answer'
+        run: ctest --test-dir cmake-build --output-on-failure
+
+      - name: Test Lab 4 (answer, Ubuntu)
+        if: steps.edition.outputs.name == 'answer' && runner.os == 'Linux'
         run: |
           python3 -m venv .venv
           . .venv/bin/activate
           python -m pip install --upgrade pip
-          python -m pip install duckdb pytest
-          cd lab4_lakebase
-          python -m pytest test_lakebase.py -v
+          python -m pip install -r lab4_lakebase/requirements.txt
+          python -m pytest lab4_lakebase/test_lakebase.py -v
+
+      - name: Verify generated student edition (answer, Ubuntu)
+        if: steps.edition.outputs.name == 'answer' && runner.os == 'Linux'
+        shell: bash
+        run: |
+          output_dir="$(mktemp -d)"
+          rmdir "$output_dir"
+          bash tools/strip_solutions.sh "$output_dir"
+          test "$(tr -d '[:space:]' < "$output_dir/.tiny-duckdb-edition")" = "student"
+          cmake -S "$output_dir" -B "$output_dir/cmake-build" \
+            -DCMAKE_BUILD_TYPE=Debug -DTINY_DUCKDB_SANITIZER=
+          cmake --build "$output_dir/cmake-build" -j2

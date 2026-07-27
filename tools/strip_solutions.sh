@@ -1,84 +1,48 @@
 #!/usr/bin/env bash
-# strip_solutions.sh - produce the STUDENT edition of tiny-duckdb.
+# Generate a student edition from the answer edition.
 #
-# Removes everything between
-#   // [SOLUTION BEGIN Lx.Ty]   (C++)   or   # [SOLUTION BEGIN Lx.Ty] (Python)
-# and the matching
-#   // [SOLUTION END]           (C++)   or   # [SOLUTION END]         (Python)
-# replacing it with a NotImplementedException stub (C++) or a `raise` (Python),
-# so students get a compiling skeleton with tasks to fill in.
-#
-# Usage: bash tools/strip_solutions.sh [output_dir]   (default: ../tiny-duckdb-student)
+# Usage: bash tools/strip_solutions.sh [output_dir]
+# Default output: ../tiny-duckdb-student
 set -euo pipefail
 
-SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-OUT_DIR="${1:-$(dirname "$SRC_DIR")/tiny-duckdb-student}"
+SRC_DIR="$(cd "$(dirname "$0")/.." && pwd -P)"
+OUT_DIR_INPUT="${1:-$(dirname "$SRC_DIR")/tiny-duckdb-student}"
+OUT_DIR="$(python3 -c 'import os, sys; print(os.path.abspath(sys.argv[1]))' "$OUT_DIR_INPUT")"
 
-rm -rf "$OUT_DIR"
+if [[ -z "$OUT_DIR" || "$OUT_DIR" == "/" || "$OUT_DIR" == "$SRC_DIR" ]]; then
+	echo "refusing unsafe output directory: $OUT_DIR" >&2
+	exit 2
+fi
+case "$OUT_DIR/" in
+	"$SRC_DIR/"*)
+		echo "output directory must be outside the source repository: $OUT_DIR" >&2
+		exit 2
+		;;
+esac
+case "$SRC_DIR/" in
+	"$OUT_DIR/"*)
+		echo "output directory must not contain the source repository: $OUT_DIR" >&2
+		exit 2
+		;;
+esac
+
+rm -rf -- "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
-# copy everything except build artifacts and VCS internals
-(cd "$SRC_DIR" && find . -type f \
-	-not -path './build/*' -not -path './.git/*' \
-	-not -name '*.o' -not -name '*.a' \
-	-not -name 'tdbtest' -not -name 'tiny_duckdb_shell' \
-	-not -name '__pycache__' -print | while read -r f; do
-	mkdir -p "$OUT_DIR/$(dirname "$f")"
-	cp "$f" "$OUT_DIR/$f"
-done)
+# Copy tracked and non-ignored working-tree files only. Build products, virtual
+# environments, caches, and .git internals never enter the student archive.
+while IFS= read -r -d '' file; do
+	mkdir -p "$OUT_DIR/$(dirname "$file")"
+	cp "$SRC_DIR/$file" "$OUT_DIR/$file"
+done < <(git -C "$SRC_DIR" ls-files --cached --others --exclude-standard -z)
 
-python3 - "$OUT_DIR" << 'PYEOF'
-import os
-import re
-import sys
+strip_output="$(python3 "$OUT_DIR/tools/strip_solutions_inplace.py")"
+echo "$strip_output"
+printf 'student\n' >"$OUT_DIR/.tiny-duckdb-edition"
 
-root = sys.argv[1]
-
-CPP_RE = re.compile(
-    r"(?P<indent>[ \t]*)// \[SOLUTION BEGIN (?P<task>L\d+\.T\d+(?:-T\d+)?)\]\n.*?\n[ \t]*// \[SOLUTION END\]",
-    re.DOTALL,
-)
-PY_RE = re.compile(
-    r"(?P<indent>[ \t]*)# \[SOLUTION BEGIN (?P<task>L\d+\.T\d+(?:-T\d+)?)\]\n.*?\n[ \t]*# \[SOLUTION END\]",
-    re.DOTALL,
-)
-
-
-def cpp_stub(match):
-    indent = match.group("indent")
-    task = match.group("task")
-    return ("{}// TODO({}): implement this (see the corresponding docs/labN.md)\n"
-            "{}throw NotImplementedException(\"task {} not implemented yet\");").format(indent, task,
-                                                                                        indent, task)
-
-
-def py_stub(match):
-    indent = match.group("indent")
-    task = match.group("task")
-    return ('{}# TODO({}): implement this (see the lab handout)\n'
-            '{}raise NotImplementedError("task {} not implemented yet")').format(indent, task, indent,
-                                                                                 task)
-
-
-count = 0
-for dirpath, _, filenames in os.walk(root):
-    for filename in filenames:
-        path = os.path.join(dirpath, filename)
-        if filename.endswith((".cpp", ".hpp", ".h")):
-            pattern, stub = CPP_RE, cpp_stub
-        elif filename.endswith(".py"):
-            pattern, stub = PY_RE, py_stub
-        else:
-            continue
-        with open(path) as f:
-            source = f.read()
-        source, n = pattern.subn(stub, source)
-        if n > 0:
-            count += n
-            with open(path, "w") as f:
-                f.write(source)
-
-print("stripped {} solution blocks".format(count))
-PYEOF
+if grep -R -n '\[SOLUTION BEGIN\|\[SOLUTION END\]' "$OUT_DIR/src" "$OUT_DIR/lab4_lakebase" >/dev/null; then
+	echo "student generation failed: solution markers remain" >&2
+	exit 1
+fi
 
 echo "student edition written to $OUT_DIR"

@@ -49,7 +49,7 @@ bool IsVectorDistanceName(const std::string& name) {
 		   lowered == "array_negative_inner_product";
 }
 
-bool ContainsAggregate(Expression& expression) {
+[[maybe_unused]] bool ContainsAggregate(Expression& expression) {
 	if (expression.type == ExpressionType::AGGREGATE_COUNT) {
 		// FunctionExpression stores AGGREGATE_COUNT as a placeholder type
 		auto& function = static_cast<FunctionExpression&>(expression);
@@ -77,7 +77,7 @@ bool ContainsAggregate(Expression& expression) {
 	return false;
 }
 
-void SplitConjunction(Expression& expression, std::vector<Expression*>& conjuncts) {
+[[maybe_unused]] void SplitConjunction(Expression& expression, std::vector<Expression*>& conjuncts) {
 	if (expression.type == ExpressionType::CONJUNCTION_AND) {
 		auto& conjunction = static_cast<ConjunctionExpression&>(expression);
 		SplitConjunction(*conjunction.left, conjuncts);

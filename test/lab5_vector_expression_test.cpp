@@ -113,3 +113,29 @@ TEST(Lab5VectorExpressionTest, NullDistancePropagates) {
 	EXPECT_TRUE(result->GetValue(1, 0).IsNull());
 	EXPECT_NEAR(result->GetValue(1, 1).GetDouble(), 0.0, 1e-12);
 }
+
+TEST(Lab5VectorExpressionTest, ExactTopKAcrossExecutionChunks) {
+	TinyDuckDB db;
+	db.SetThreads(4);
+	Connection connection(db);
+	connection.Query("CREATE TABLE points (id INTEGER, embedding VECTOR(1))");
+	auto& table = db.GetCatalog().GetTable("points");
+	DataChunk chunk;
+	chunk.Initialize(table.GetColumnTypes());
+	constexpr idx_t ROWS = STANDARD_VECTOR_SIZE * 3;
+	for (idx_t id = 0; id < ROWS; id++) {
+		chunk.AppendRow({Value::Integer(static_cast<int32_t>(id)), Value::Vector({static_cast<double>(id)})});
+		if (chunk.size() == STANDARD_VECTOR_SIZE) {
+			table.Append(chunk);
+			chunk.Reset();
+		}
+	}
+
+	auto result = connection.Query("SELECT id, l2_distance(embedding, [0]) AS distance "
+								   "FROM points ORDER BY distance LIMIT 10");
+	ASSERT_EQ(result->RowCount(), 10);
+	for (idx_t row = 0; row < 10; row++) {
+		EXPECT_EQ(result->GetValue(0, row), Value::Integer(static_cast<int32_t>(row)));
+		EXPECT_NEAR(result->GetValue(1, row).GetDouble(), static_cast<double>(row), 1e-12);
+	}
+}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -96,6 +97,9 @@ class PhysicalOperator {
 	}
 
 	// --- source interface ---
+	//! Maximum number of workers that may drain this source concurrently.
+	//! Order-sensitive materialized sources override this with 1.
+	virtual idx_t MaxSourceThreads() const { return std::numeric_limits<idx_t>::max(); }
 	virtual std::unique_ptr<OperatorState> GetOperatorState(ExecutionContext& context);
 	virtual std::unique_ptr<GlobalSourceState> GetGlobalSourceState(ExecutionContext& context);
 	virtual void GetData(ExecutionContext& context, DataChunk& chunk, SourceInput& input);

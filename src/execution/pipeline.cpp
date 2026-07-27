@@ -1,5 +1,6 @@
 #include "tiny_duckdb/execution/pipeline.hpp"
 
+#include <algorithm>
 #include <exception>
 #include <mutex>
 #include <thread>
@@ -14,6 +15,7 @@ void Pipeline::Execute(TinyDuckDB& db, idx_t thread_count) {
 	if (!source) {
 		throw ExecutorException("pipeline without a source");
 	}
+	thread_count = std::max<idx_t>(1, std::min(thread_count, source->MaxSourceThreads()));
 	ExecutionContext context(db, 0);
 	auto global_source = source->GetGlobalSourceState(context);
 	std::unique_ptr<GlobalSinkState> global_sink;

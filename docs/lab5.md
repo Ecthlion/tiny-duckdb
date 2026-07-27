@@ -1,7 +1,7 @@
 # Lab 5 - Vector Expression 与相似度检索
 
 > 对应代码：`src/common/vector_operations.cpp`、`src/binder/binder.cpp`、`src/execution/expression_executor.cpp`  
-> 对应测试：`test/lab5_vector_expression_test.cpp`（7 个用例）  
+> 对应测试：`test/lab5_vector_expression_test.cpp`（8 个用例）
 > 前置 Lab：Lab 1（列存）+ Lab 2（Binder）+ Lab 3 T1/T2/T6（表达式、Projection、Order/Limit）
 
 ## Overview
@@ -275,6 +275,7 @@ make -j4
 ./tdbtest Lab5VectorExpressionTest.DistanceKernels
 ./tdbtest Lab5VectorExpressionTest.Binder
 ./tdbtest Lab5VectorExpressionTest.ExactTopK
+./tdbtest Lab5VectorExpressionTest.ExactTopKAcrossExecutionChunks
 ./tdbtest Lab5
 ```
 
@@ -286,7 +287,7 @@ make -j4
 
 ## Grading Rubric
 
-1. Lab 5 的 7 个测试全部通过；
+1. Lab 5 的 8 个测试全部通过，包括 4 线程、跨 execution chunk 的 exact Top‑K；
 2. 全部旧 Lab 回归测试通过；
 3. 三种函数没有硬编码维度或测试数据；
 4. 维度/类型错误必须由 Binder 拒绝；

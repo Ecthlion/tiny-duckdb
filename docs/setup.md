@@ -25,18 +25,18 @@ python3 --version
 git clone YOUR_REPOSITORY_URL tiny-duckdb
 cd tiny-duckdb
 make -j"$(nproc)"
-./tdbtest Lab0
+./tdbtest --list | head
 ```
 
-看到 `5 passed, 0 failed` 说明 C++ 环境就绪。也可以使用 CMake：
+能列出测试名称说明编译、链接和测试框架均已就绪。学生版的 Lab 测试在实现对应任务前失败是正常现象。也可以使用 CMake：
 
 ```bash
 cmake -S . -B cmake-build -DCMAKE_BUILD_TYPE=Debug
 cmake --build cmake-build -j
-ctest --test-dir cmake-build --output-on-failure
+./cmake-build/tdbtest --list | head
 ```
 
-Debug 构建适合做实验：断言、堆栈和变量不会被 `-O2` 优化掉。提交前再运行 Makefile 的默认优化构建。
+Debug 构建适合做实验：断言、堆栈和变量不会被 `-O2` 优化掉。CMake 会像 BusTub 一样在 Debug 下默认启用 AddressSanitizer；提交前再运行 Makefile 的默认优化构建。
 
 ## 2. macOS
 
@@ -59,7 +59,7 @@ make --version
 git clone YOUR_REPOSITORY_URL tiny-duckdb
 cd tiny-duckdb
 make -j"$(sysctl -n hw.logicalcpu)"
-./tdbtest Lab0
+./tdbtest --list | head
 ```
 
 macOS 没有 Linux 的 `nproc`，不要直接复制 `make -j$(nproc)`。不想记平台差异时，`make -j4` 在两边都可用。
@@ -71,7 +71,7 @@ brew install cmake python
 brew install clang-format
 cmake -S . -B cmake-build -DCMAKE_BUILD_TYPE=Debug
 cmake --build cmake-build -j
-ctest --test-dir cmake-build --output-on-failure
+./cmake-build/tdbtest --list | head
 ```
 
 若同时安装了多个编译器，可显式选择：
@@ -91,9 +91,8 @@ make -j4 CXX=clang++
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install duckdb pytest
-cd lab4_lakebase
-python -m pytest test_lakebase.py -v
+python -m pip install -r lab4_lakebase/requirements.txt
+python -m pytest lab4_lakebase/test_lakebase.py -v
 ```
 
 退出虚拟环境用 `deactivate`。Ubuntu 24.04 默认启用 externally-managed Python，直接对系统环境运行 `pip install` 可能失败；使用 `.venv` 是预期做法。
@@ -145,9 +144,9 @@ make -j"$(sysctl -n hw.logicalcpu)"
 
 必须在仓库根目录运行 `make`。用 `pwd` 和 `ls CMakeLists.txt` 确认当前位置。不要单独编译某个 `.cpp`，否则会丢失 `src/include` 与测试头文件的 include path。
 
-### 修改头文件后出现奇怪的类型或链接错误
+### 切换编译器或编译选项后出现奇怪的类型或链接错误
 
-Makefile 是简化的教学版本，没有自动生成头文件依赖。做一次干净构建：
+Makefile 会跟踪头文件依赖，但不会区分同一路径下由不同编译器生成的目标文件。切换工具链或 sanitizer 后做一次干净构建：
 
 ```bash
 make clean
@@ -175,9 +174,10 @@ for i in {1..20}; do ./tdbtest Lab0MorselTest.ConcurrentExactlyOnce || break; do
 ```bash
 cmake -S . -B asan-build \
   -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+  -DTINY_DUCKDB_SANITIZER=address
 cmake --build asan-build -j
 ./asan-build/tdbtest
 ```
 
-Apple Clang 与 Ubuntu GCC 都支持上述配置。
+AddressSanitizer 已是 Debug 默认值。要同时检查未定义行为可传
+`-DTINY_DUCKDB_SANITIZER=address,undefined`；临时关闭则传空值。Apple Clang 与 Ubuntu GCC 都支持 AddressSanitizer。

@@ -78,7 +78,7 @@ bool VectorValueEqual::operator()(const std::vector<Value>& left, const std::vec
 namespace {
 
 //! SQL semantics: a NULL join key never matches anything
-bool KeyHasNull(const std::vector<Value>& key) {
+[[maybe_unused]] bool KeyHasNull(const std::vector<Value>& key) {
 	for (const auto& value : key) {
 		if (value.IsNull()) {
 			return true;

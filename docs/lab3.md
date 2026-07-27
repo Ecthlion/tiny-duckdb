@@ -1,7 +1,7 @@
 # Lab 3 - 执行引擎：push-based、morsel-driven、向量化
 
 > 对应代码：`src/execution/expression_executor.cpp`、`src/execution/operator/*.cpp`、`src/execution/pipeline.cpp`
-> 对应测试：`test/lab3_execution_test.cpp`（36 个用例，端到端跑真实 SQL）
+> 对应测试：`test/lab3_execution_test.cpp`（37 个用例，端到端跑真实 SQL）
 
 ## Overview
 
@@ -143,17 +143,19 @@ Join 一人分饰两角（回看 Background 的流水线切分图）：
 - **T6a `OrderBy::Finalize`**：按 `keys`（列号, ascending）多键稳定排序；`Value::LessThan` 定义 NULL 最小；DESC 交换比较方向。
 - **T6b `Limit::Sink`**：LIMIT 与顺序无关，**全局**截断——全局锁内只保留前 `limit` 行，够了就整块丢弃。
 
-**测试**：`OrderByAsc`、`OrderByDescLimit`、`OrderByMultipleKeys`、`OrderByGroupByResult`、`LimitOnly`、`LimitZeroAndBeyondTotal`。
+排序完成后的 source 必须按全局顺序交付 chunk。框架通过 `MaxSourceThreads() == 1` 串行 drain `OrderBy` 和 `Limit`；否则多个线程虽然能原子领取不同 offset，却可能按完成时间乱序进入下游，令大结果排序和 Top‑K 错误。
+
+**测试**：`OrderByAsc`、`OrderByDescLimit`、`OrderByMultipleKeys`、`OrderByGroupByResult`、`LimitOnly`、`LimitZeroAndBeyondTotal`，以及两个跨越 4 个 execution chunk 的全局顺序回归。
 
 ## Testing
 
 ```bash
-./tdbtest Lab3                              # 36 个端到端用例
+./tdbtest Lab3                              # 37 个端到端用例
 ./tdbtest Lab3ExecutionTest.Join            # 只跑 join 组
 ./tiny_duckdb_shell                         # 手工验收：README 里的示例查询
 ```
 
-里程碑自检：T1-T3 完成后 `SELECT ... FROM ... WHERE ...` 应已可用；T4 后聚合可用；T5 后 join 可用；T6 后全部 36 个用例转绿。
+里程碑自检：T1-T3 完成后 `SELECT ... FROM ... WHERE ...` 应已可用；T4 后聚合可用；T5 后 join 可用；T6 后全部 37 个用例转绿。
 
 ## Development Hints
 

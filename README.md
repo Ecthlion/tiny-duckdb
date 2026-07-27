@@ -58,6 +58,8 @@ tdb> SELECT l_returnflag, count(*), avg(l_quantity) FROM lineitem GROUP BY l_ret
 
 每份实验指导书按 BusTub 风格组织：Overview（任务与测试里程碑表）→ Background（必读背景）→ 逐任务规格与 Hint → Testing → Development Hints → Grading Rubric → 思考题。源码中的任务注释（strip 后保留给学生）与指导书一一对应。
 
+授课安排、评分建议、双版本发布流程与后续建设路线见 [docs/instructor-guide.md](docs/instructor-guide.md)。
+
 ## 快速开始
 
 Ubuntu 24.04 与 macOS 的完整依赖安装、Debug/ASan 配置和故障排查见 [docs/setup.md](docs/setup.md)。
@@ -66,7 +68,7 @@ Ubuntu 24.04 与 macOS 的完整依赖安装、Debug/ASan 配置和故障排查�
 # 构建（跨平台写法；也提供 CMakeLists.txt）
 make -j4
 
-# 运行全部 96 个 C++ 测试（Lab 0-3、Lab 5）
+# 运行全部 100 个 C++ 测试（Lab 0-3、Lab 5）
 make test                    # 等价于 ./tdbtest
 
 # 按套件名/前缀过滤（BusTub 式工作流：完成一个任务就跑它的一组测试）
@@ -82,15 +84,16 @@ CMake 方式：
 ```bash
 cmake -S . -B cmake-build
 cmake --build cmake-build -j
-./cmake-build/tdbtest
+ctest --test-dir cmake-build --output-on-failure
 ```
 
-Lab 4 是 Python 实验（需要 `pip install duckdb pytest`）：
+未指定构建类型时，CMake 默认使用 Debug + AddressSanitizer；可通过
+`-DTINY_DUCKDB_SANITIZER=` 关闭。Lab 4 使用锁定版本的 Python 依赖：
 
 ```bash
-cd lab4_lakebase
-python3 -m pytest test_lakebase.py -v
-python3 demo.py
+python3 -m pip install -r lab4_lakebase/requirements.txt
+python3 -m pytest lab4_lakebase/test_lakebase.py -v
+python3 lab4_lakebase/demo.py
 ```
 
 ## 学生版 / 参考解答版
@@ -100,13 +103,13 @@ python3 demo.py
 - `main`：学生版（默认）。每个任务位置保留 TODO，并用 `throw NotImplementedException(...)` / `raise NotImplementedError(...)` 做可编译桩。
 - `answer`：参考解答版（所有任务均已实现，能优雅通过全部测试）。
 
-如果需要从 `answer` 生成学生骨架版（导出到另一个目录）：
+`.tiny-duckdb-edition` 是 CI 使用的版本标识。`answer` 是单一真源，发布学生版时由脚本导出：
 
 ```bash
 bash tools/strip_solutions.sh ../tiny-duckdb-student
 ```
 
-学生版代码可以直接编译，测试几乎全部失败（并明确报出 `task Lx.Ty not implemented yet`），学生按 Lab 顺序逐个解锁；源码中的任务注释与 `docs/labN.md` 指导书提供完整实现指引。
+脚本只复制 Git 跟踪或未忽略的源码，拒绝危险输出目录，删除解答块后还会检查是否有标记残留。学生版代码可以直接编译，未完成任务的测试会明确报出 `task Lx.Ty not implemented yet`。
 
 ## 目录结构
 

@@ -30,6 +30,7 @@ class PhysicalOrderBy : public PhysicalOperator {
 	void Combine(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate) override;
 	void Finalize(ExecutionContext& context, GlobalSinkState& gstate) override;
 
+	idx_t MaxSourceThreads() const override { return 1; }
 	void GetData(ExecutionContext& context, DataChunk& chunk, SourceInput& input) override;
 
 	std::vector<std::pair<idx_t, bool>> keys;
@@ -50,6 +51,7 @@ class PhysicalLimit : public PhysicalOperator {
 	void Combine(ExecutionContext& context, GlobalSinkState& gstate, LocalSinkState& lstate) override;
 	void Finalize(ExecutionContext& context, GlobalSinkState& gstate) override;
 
+	idx_t MaxSourceThreads() const override { return 1; }
 	void GetData(ExecutionContext& context, DataChunk& chunk, SourceInput& input) override;
 
 	int64_t limit;

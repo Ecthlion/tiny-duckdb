@@ -1,5 +1,8 @@
 # build artifacts
 build/
+cmake-build*/
+asan-build*/
+tsan-build*/
 *.o
 *.a
 tdbtest

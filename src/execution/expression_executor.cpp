@@ -55,7 +55,7 @@ namespace tiny_duckdb {
 //! Tests: Lab3ExecutionTest.ExpressionEvaluatorSelect*
 //! ============================================================================
 
-static bool EvaluateComparison(ExpressionType comparison, const Value& left, const Value& right) {
+[[maybe_unused]] static bool EvaluateComparison(ExpressionType comparison, const Value& left, const Value& right) {
 	bool eq = Value::Equals(left, right);
 	switch (comparison) {
 	case ExpressionType::COMPARE_EQUAL:
@@ -77,7 +77,8 @@ static bool EvaluateComparison(ExpressionType comparison, const Value& left, con
 
 //! LAB 5 - TASK #3: evaluate two VECTOR children once per DataChunk, then run
 //! the selected distance kernel row by row.
-static void EvaluateVectorDistance(const BoundVectorDistanceExpression& expr, DataChunk& chunk, Vector& result) {
+[[maybe_unused]] static void EvaluateVectorDistance(const BoundVectorDistanceExpression& expr, DataChunk& chunk,
+													Vector& result) {
 	// TODO(L5.T3): implement this (see the corresponding docs/labN.md)
 	throw NotImplementedException("task L5.T3 not implemented yet");
 }

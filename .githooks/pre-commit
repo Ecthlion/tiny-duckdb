@@ -9,7 +9,7 @@ fi
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-files="$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|h)$' || true)"
+files="$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|h)$' | grep -v '^third_party/' || true)"
 if [[ -z "${files}" ]]; then
 	exit 0
 fi
